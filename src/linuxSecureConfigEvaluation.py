@@ -94,6 +94,356 @@ def generateOutputName():
 
     return outputname_to_ret 
 
+#--------------
+# Auto-Update Checks - unattended upgrades status
+#--------------
+def autoUpdateUpgrades():
+    logging.debug(f"\tWorking on [ Auto-Updates : Unattended Upgrades ]")
+
+#--------------
+# Auto-Update Checks - package manager configured
+#--------------
+def autoUpdatePackageManager():
+    logging.debug(f"\tWorking on [ Auto-Updates : Package Manager ]")
+
+#--------------
+# Auto-Update Checks - update timer status
+#--------------
+def autoUpdatePackageManager():
+    logging.debug(f"\tWorking on [ Auto-Updates : Update Timer ]")
+
+#--------------
+# Credential Checks - minimum password length 
+#--------------
+def credentialMinLen():
+    logging.debug(f"\tWorking on [ Credentials : Minimum Password Length ]")
+
+#--------------
+# Credential Checks - password complexity
+#--------------
+def credentialComplexity():
+    logging.debug(f"\tWorking on [ Credentials : Password Complexity ]")
+
+#--------------
+# Credential Checks - password expiration
+#--------------
+def credentialExpiration():
+    logging.debug(f"\tWorking on [ Credentials : Expiration ]")
+
+#--------------
+# Credential Checks - password reuse prevention
+#--------------
+def credentialReusePrevention():
+    logging.debug(f"\tWorking on [ Credentials : Password Reuse Prevention ]")
+
+#--------------
+# Credential Checks - account lockout policy
+#--------------
+def credentialMinLen():
+    logging.debug(f"\tWorking on [ Credentials : Account Lockout Policy ]")
+
+#--------------
+# Firewall Checks - UFW / Firewalld Enabled
+#--------------
+def firewallEnabled():
+    logging.debug(f"\tWorking on [ Firewall : Service Enabled ]")
+
+#--------------
+# Firewall Checks - Firewall active
+#--------------
+def firewallActive():
+    logging.debug(f"\tWorking on [ Firewall : Service Active ]")
+
+#--------------
+# Firewall Checks - deny-by-default
+#--------------
+def firewallDenyDefault():
+    logging.debug(f"\tWorking on [ Firewall : Deny-by-default ]")
+
+#--------------
+# Firewall Checks - Unnecessary Open Ports
+#--------------
+def firewallUnnecessaryOpenPorts():
+    logging.debug(f"\tWorking on [ Firewall : Unnecessary Open Ports ]")
+
+#--------------
+# Firewall Checks - SSH Restrictions
+#--------------
+def firewallSSHRestricted():
+    logging.debug(f"\tWorking on [ Firewall : SSH Restrictions ]")
+
+#--------------
+# Kernel Checks - Disable IP-Forwarding
+#--------------
+def kernelDisableIPForward():
+    logging.debug(f"\tWorking on [ Kernel : IP-Forwarding Disabled ]")
+
+#--------------
+# Kernel Checks - Ignore ICMP Redirects
+#--------------
+def kernelDisableICMPRedirect():
+    logging.debug(f"\tWorking on [ Kernel : ICMP Redirects Disabled]")
+
+#--------------
+# Kernel Checks - Enable SYN Cookies
+#--------------
+def kernelEnableSYNCookies():
+    logging.debug(f"\tWorking on [ Kernel : SYN Cookies Enabled]")
+
+#--------------
+# Kernel Checks - Disable Source Routing
+#--------------
+def kernelDisableSourceRouting():
+    logging.debug(f"\tWorking on [ Kernel : Source Routing Disabled ]")
+
+#--------------
+# Logging Checks - Unnecessary Services
+#--------------
+def loggingUnnecessaryServices():
+    logging.debug(f"\tWorking on [ Logging : Unnecessary Services ]")
+
+#--------------
+# Logging Checks - Exposed Network Services
+#--------------
+def loggingExposedNetworkServices():
+    logging.debug(f"\tWorking on [ Logging : Exposed Network Services ]")
+
+#--------------
+# Logging Checks - Legacy Protocols
+#--------------
+def loggingLegacyProtocols():
+    logging.debug(f"\tWorking on [ Logging : Legacy Protocols ]")
+
+#--------------
+# Permissions Checks - Legacy Protocols
+#--------------
+def permissionsWorldWritableFiles():
+    logging.debug(f"\tWorking on [ Permissions : Legacy Protocols ]")
+
+#--------------
+# Permissions Checks - Improper SSH Key Permission
+#--------------
+def permissionsImproperSSHKeyPermissions():
+    logging.debug(f"\tWorking on [ Permissions : Legacy Protocols ]")
+
+#--------------
+# Permissions Checks - SUID / SGID Binaries
+#--------------
+def permissionsSUIDSGIDBinaries():
+    logging.debug(f"\tWorking on [ Permissions : SUID / SGID Binaries]")
+
+#--------------
+# Permissions Checks - Sensitive File Ownership
+#--------------
+def permissionsSensitiveFileOwnership():
+    logging.debug(f"\tWorking on [ Permissions : Sensitive File Ownership ]")
+
+#--------------
+# Remote / SSH Checks - root login disabled
+#--------------
+def remoteRootLoginDisabled():
+    logging.debug(f"\tWorking on [ Remote : Root Loging Disabled ]")
+
+#--------------
+# Remote / SSH Checks - password authentication disabled
+#--------------
+def remotePasswordAuthDisabled():
+    logging.debug(f"\tWorking on [ Remote : Password Authentication Disabled ]")
+
+#--------------
+# Remote / SSH Checks - ssh protocol version
+#--------------
+def remoteProtocolVersion():
+    logging.debug(f"\tWorking on [ Remote : SSH Protocol Version]")
+
+#--------------
+# Remote / SSH Checks - empty passwords disabled
+#--------------
+def remoteEmptyPasswordsDisabled():
+    logging.debug(f"\tWorking on [ Remote : Empty Password Disabled ]")
+
+#--------------
+# Remote / SSH Checks - max authorization attempts
+#--------------
+def remoteMaxAuthAttempts():
+    logging.debug(f"\tWorking on [ Remote : Max Authorization Attempts Configured ]")
+
+#--------------
+# Remote / SSH Checks - idle timeout configured
+#--------------
+def remoteIdleTimeoutConfigured():
+    logging.debug(f"\tWorking on [ Remote : Idle Timeout Configured ]")
+
+#--------------
+# Remote / SSH Checks - Strong Cipher
+#--------------
+def remoteRootLoginDisabled():
+    logging.debug(f"\tWorking on [ Remote : Cipher Checks ]")
+
+#--------------
+# Service Minimalization - unnecessary services
+#--------------
+def servicesUnnecessary():
+    logging.debug(f"\tWorking on [ Service Minimization : Unnecessary Services ]")
+
+#--------------
+# Service Minimalization - exposed network services
+#--------------
+def servicesExposedNetworkServices():
+    logging.debug(f"\tWorking on [ Service Minimization : Exposed Network Services ]")
+
+#--------------
+# Service Minimalization - legacy protocols
+#   (telnet, ftp, rsh, cups, avahi, unused web servers)
+#--------------
+def servicesLegacyProtocols():
+    logging.debug(f"\tWorking on [ Service Minimization : Legacy Protocols ]")
+
+#--------------
+# User-Privileges - users with UID 0
+#--------------
+def userPrivUIDUsers():
+    logging.debug(f"\tWorking on [ User Privileges : Users with UID 0 ]")
+
+#--------------
+# User-Privileges - sudo group memberships
+#--------------
+def userPrivSUDOGroupMemberships():
+    logging.debug(f"\tWorking on [ User Privileges : SUDO Group Membership]")
+
+#--------------
+# User-Privileges - inactive accounts
+#--------------
+def userPrivInactiveAccounts():
+    logging.debug(f"\tWorking on [ User Privileges : Inactive Accounts ]")
+
+#--------------
+# User-Privileges - empty passwords
+#--------------
+def userPrivEmptyPasswords():
+    logging.debug(f"\tWorking on [ User Privileges : Empty Passwords ]")
+
+#--------------
+# User-Privileges - unauthorized users
+#--------------
+def userPrivUnauthorizedUsers():
+    logging.debug(f"\tWorking on [ User Privileges : Unauthorized Users ]")
+
+#--------------
+# User-Privileges - service accounts with shells
+#--------------
+def userPrivServiceAccountShell():
+    logging.debug(f"\tWorking on [ User Privileges : Service Accounts with Shells ]")
+
+#==========================================
+# Auto-Update Checks
+#   - Unattended upgrades enabled
+#   - Package manager configured
+#   - Update timer status (active)
+#==========================================
+def checkAutoUpdates():
+    logging.info(f"Current Check : [ Auto-Updates ]")
+
+    # JSON Output String
+    output_string = ""
+
+    #---
+    # Run the checks
+    #---
+    u_up_str = autoUpdateUpgrades()
+    pkt_man_str = autoUpdatePackageManager()
+    u_up_str = autoUpdatePackageManager()
+
+    #---
+    # Create JSON output
+    #---
+
+
+#==========================================
+# Credential / Password Policy Checks
+#   - Minimum password length
+#   - Password complexity requirements
+#   - Password expiration
+#   - Password reuse prevention
+#   - Account lockout policy
+#==========================================
+def checkCredentialPassword():
+    logging.info(f"Current Check : [ Credentials / Password ]")
+
+#==========================================
+# Logging Checks
+#   - Unnecessary services
+#   - Exposed network services
+#   - Legacy protocols
+#==========================================
+def checkLogging():
+    logging.info(f"Current Check : [ Logging Configuration ]")
+
+#==========================================
+# Firewall Checks
+#   - UFW / firewalld Enabled
+#   - Firewall active
+#   - Deny-by-default
+#   - Unnecessary ports open
+#   - SSH Restricted
+#==========================================
+def checkFirewall():
+    logging.info(f"Current Check : [ Firewall ]")
+
+#==========================================
+# Kernel / System Checks
+#   - Disable IP-Forwarding
+#   - Ignore ICMP redirects
+#   - Enable SYN cookies
+#   - Disable source routing
+#==========================================
+def checkKernelSystem():
+    logging.info(f"Current Check : [ Kernel / System ]")
+
+#==========================================
+# Permissions (File) Checks
+#   - World-writable files
+#   - Improper SSH key permissions
+#   - SUID / SGID binaries
+#   - Sensitive file ownership
+#==========================================
+def checkPermissions():
+    logging.info(f"Current Check : [ Permissions (File) ]")
+
+#==========================================
+# Remote / SSH Checks
+#   - Root login disabled
+#   - Password authentication disabled
+#   - SSH protocol version
+#   - Empty passwords disabled
+#   - Max authorization attempts securely configured
+#   - Idle timeout configured
+#   - Strong ciphers / MACs
+#==========================================
+def checkRemote():
+    logging.info(f"Current Check : [ Permissions (File) ]")
+
+#==========================================
+# Service Minimization Check
+#   - Unnecessary services
+#   - Exposed network services
+#   - Legaacy protocols (telnet, ftp, rsh, cups, avahi, unused web servers)
+#==========================================
+def checkServices():
+    logging.info(f"Current Check : [ Services ]")
+
+#==========================================
+# User-privileges Check
+#   - Users with UID 0
+#   - SUDO group membership
+#   - Inactive accounts
+#   - Empty passwords
+#   - Unauthorized users
+#   - Service accounts with shells
+#==========================================
+def checkUserPrivileges():
+    logging.info(f"Current Check : [ User-Privileges ]")
+
 #==============
 # 'Quick' Output for Audit Checks that can be performed
 #   Will also indicate if particular checks can be remediated
@@ -104,8 +454,35 @@ def outputAuditCheckInformation():
 #==============
 # Wrapper for Audit Checks
 #==============
-def auditChecksWrapper():
+def auditChecksFullWrapper():
     logging.info(f"Begining Audit Checks")
+
+    # Auto-Update Checks
+    checkAutoUpdates()
+
+    # Credential / Password Policy Checks
+    checkCredentialPassword()
+
+    # Firewall Checks
+    checkFirewall()
+
+    # Kernel / System Checks
+    checkKernelSystem()
+
+    # Logging Checks
+    checkLogging()
+
+    # Permissions (File) Checks
+    checkPermissions()
+
+    # Remote / SSH Checks
+    checkRemote()
+
+    # Services Check
+    checkServices()
+
+    # User-privileges Check
+    checkUserPrivileges()
 
 #==============
 # Wrapper for Remediation Checks and Steps
@@ -259,7 +636,7 @@ def main():
     # Audit Only
     #-------------
     elif args.subcommand == 'audit':
-        #auditChecksWrapper()
+        auditChecksFullWrapper()
         print(f"AUDIT TREE")
 
     #-------------
