@@ -21,6 +21,10 @@ import argparse
 import logging
 
 from pathlib import Path
+import subprocess
+import json
+import platform
+import shutil
 
 #--------------------
 # Global Variables
@@ -34,6 +38,16 @@ TIMESTAMP = timestamp_dirty.strftime("%Y%m%d_%H%M%S")
 global CWD
 CWD = .os.path.abspath(os.getcwd())
 CWD = CWD + "/"
+
+# Check metrics
+global PASSES
+global FAILURES
+global WARNINGS
+global TOTAL_CHECKS
+PASSES = 0
+FAILURES = 0
+WARNINGS = 0
+TOTAL_CHECKS = 0
 
 #--------------------------------------------------------------------------
 # Functions
@@ -96,9 +110,44 @@ def generateOutputName():
 
 #--------------
 # Auto-Update Checks - unattended upgrades status
+#   updateSummaryCounts(passed_passes, passed_failures, passed_warnings, passed_total_checks):
 #--------------
 def autoUpdateUpgrades():
     logging.debug(f"\tWorking on [ Auto-Updates : Unattended Upgrades ]")
+
+    # Use apt-config
+    # 1 = enabled | 0 = disabled
+    unattend_upgrades_check = subprocess.check_output(["apt-config", "shell", "unattended", "APT::Periodic::Unattended-Upgrade"], universal_newlines=True)
+
+    # Enabled
+    if 'unattended="1"' in unattend_upgrades_check:
+
+        # Put into dictionary
+        unattended_upgrades_dict = {
+            "expected" : "enabled",
+            "actual" : "enabled",
+            "status" : "PASS"
+        }
+
+        # Update globals
+        updateSummaryCounts(1, 0, 0, 1):
+
+        return unattended_upgrades_dict 
+
+    # Disabled
+    else:
+        # Put into dictionary
+        unattended_upgrades_dict = {
+            "expected" : "enabled",
+            "actual" : "disabled",
+            "status" : "FAIL"
+        }
+
+        # Update globals
+        updateSummaryCounts(0, 1, 0, 1):
+
+        return unattended_upgrades_dict 
+
 
 #--------------
 # Auto-Update Checks - package manager configured
@@ -106,11 +155,84 @@ def autoUpdateUpgrades():
 def autoUpdatePackageManager():
     logging.debug(f"\tWorking on [ Auto-Updates : Package Manager ]")
 
+    # Check for package manager
+    #   Debian/Ubuntu  : apt
+    #   Fedora//CentOS : dnf
+    #   Arch Linux     : pacman
+    #   openSUSE Linux : zypper
+    #   Alpine Linux   : apk
+    pkg_mngrs = ['apt', 'dnf', 'yum', 'pacman', 'zypper', 'apk']
+
+    pkg_mgr = None
+    # Iterate through possible
+    for mngr in pkg_mngrs:
+        # If package manager is installed, will evaluate true
+        if shutil.which(mngr):
+            pkg_mgr = mngr
+
+    # Determine expected package manager
+    if OS_UD:
+        expected_mngr = "apt"
+    elif OS_RC:
+        expected_mngr = "dnf"
+
+    # Check for success
+    if expected_mngr == pkg_mgr:
+        overall_status == "PASS"
+
+        # Update globals
+        updateSummaryCounts(1, 0, 0, 1):
+
+    else:
+        overall_status == "FAIL"
+
+        # Update globals
+        updateSummaryCounts(0, 1, 0, 1):
+
+    pkg_mngr_dict = {
+        "expected" : expected_mngr,
+        "actual" : pkg_mgr,
+        "status" : overall_status,
+    }
+
+    return pkg_mngr_dict 
+
 #--------------
 # Auto-Update Checks - update timer status
 #--------------
-def autoUpdatePackageManager():
-    logging.debug(f"\tWorking on [ Auto-Updates : Update Timer ]")
+def autoUpdateTimerStatus():
+    logging.debug(f"\tWorking on [ Auto-Updates : Update Timer Status ]")
+
+    # Determine timer
+    if OS_UD:
+        sys_timer = "apt-daily.timer"
+    elif OS_RC:
+        sys_timer = "dnf-makecache.timer"
+
+    # Check if timer is active
+    if subprocess.check_output(["systemctl", "is-active", sys_timer], text=True).strip():
+        timer_activity = "active"
+        status = "PASSED"
+
+        # Update globals
+        updateSummaryCounts(1, 0, 0, 1):
+
+    else:
+        timer_activity = "inactive"
+        status = "FAILED"
+
+        # Update globals
+        updateSummaryCounts(0, 1, 0, 1):
+
+    # Create dictionary
+    timer_status_dict = {
+        "expected" : "active",
+        "actual" : timer_activity,
+        "status" : status
+    }
+
+    return timer_status_dict
+
 
 #--------------
 # Credential Checks - minimum password length 
@@ -241,7 +363,7 @@ def permissionsSensitiveFileOwnership():
 #--------------
 # Remote / SSH Checks - root login disabled
 #--------------
-def remoteRootLoginDisabled():
+def remoteRootLoginDisabled(config_str):
     logging.debug(f"\tWorking on [ Remote : Root Loging Disabled ]")
 
 #--------------
@@ -277,7 +399,7 @@ def remoteIdleTimeoutConfigured():
 #--------------
 # Remote / SSH Checks - Strong Cipher
 #--------------
-def remoteRootLoginDisabled():
+def remoteStrongCipher():
     logging.debug(f"\tWorking on [ Remote : Cipher Checks ]")
 
 #--------------
@@ -344,20 +466,27 @@ def userPrivServiceAccountShell():
 def checkAutoUpdates():
     logging.info(f"Current Check : [ Auto-Updates ]")
 
-    # JSON Output String
-    output_string = ""
+    auto_update_dict = {}
 
     #---
     # Run the checks
     #---
-    u_up_str = autoUpdateUpgrades()
-    pkt_man_str = autoUpdatePackageManager()
-    u_up_str = autoUpdatePackageManager()
+    u_up_dict = autoUpdateUpgrades()
+    pkt_man_dict = autoUpdatePackageManager()
+    u_timer_dict = autoUpdateTimerStatus()
 
     #---
-    # Create JSON output
+    # Create dictionary
     #---
+    auto_update_dict['unattended_upgrades'] = u_up_dict
+    auto_update_dict['packet_manager_configured'] = pkt_man_dict
+    auto_update_dict['update_timer_status'] = u_timer_dict
 
+    # Quick check
+    logging.debug(f"Number of Checks : {TOTAL_CHECKS} | Checks Passed : {PASSES} | Checks Failed : {FAILURES} | Warnings : {WARNINGS}")
+
+    # return check dictionary
+    return auto_update_dict
 
 #==========================================
 # Credential / Password Policy Checks
@@ -423,6 +552,31 @@ def checkPermissions():
 def checkRemote():
     logging.info(f"Current Check : [ Permissions (File) ]")
 
+    # Will check /etc/ssh/sshd_config
+    ssh_config_file_path = "/etc/ssh/sshd_config"
+    ssh_config = ingestFileToString(ssh_config_file_path)
+
+    # Start json string
+    ssh_temp = "remote_ssh_checks: {\n"
+
+    # Make sure the file was ingested
+    if ssh_config is not None:
+        ssh_temp += remoteRootLoginDisabled(ssh_config)
+        ssh_temp += remotePasswordAuthDisabled(ssh_config)
+        ssh_temp += remoteProtocolVersion(ssh_config)
+        ssh_temp += remoteEmptyPasswordsDisabled(ssh_config)
+        ssh_temp += remoteMaxAuthAttempts(ssh_config)
+        ssh_temp += remoteIdleTimeoutConfigured(ssh_config)
+        ssh_temp += remoteStrongCipher(ssh_config)
+
+    else:
+        # If nothing in the file, mark the test as failed
+
+    # Close the json entry
+    ssh_temp += "},"
+
+    return ssh
+
 #==========================================
 # Service Minimization Check
 #   - Unnecessary services
@@ -453,42 +607,182 @@ def outputAuditCheckInformation():
 
 #==============
 # Wrapper for Audit Checks
+#   Checks return dictionaries / arrays of dictionaries
 #==============
 def auditChecksFullWrapper():
     logging.info(f"Begining Audit Checks")
 
+    overall_scan_info = {}
+
+    #------------
+    # Create initial json string
+    #------------
+    # Audit Test Information
+    #audit_metadata_dict = metaDataGenerator()
+    overall_scan_info["scan_metadata"] = metaDataGenerator()
+
+    #------------
+    # Audit Checks
+    #------------
+    audit_checks = {}
+
     # Auto-Update Checks
-    checkAutoUpdates()
+    auto_update_dict = checkAutoUpdates()
+    audit_checks["auto_update_checks"] = auto_update_dict 
 
     # Credential / Password Policy Checks
-    checkCredentialPassword()
+    cred_dict = checkCredentialPassword()
+    audit_checks["credential_policy_checks"] = cred_dict 
 
     # Firewall Checks
-    checkFirewall()
+    firewall_dict = checkFirewall()
+    audit_checks["firewall_checks"] = firewall_dict 
 
     # Kernel / System Checks
-    checkKernelSystem()
+    kernel_dict = checkKernelSystem()
+    audit_checks["firewall_checks"] = firewall_dict 
 
     # Logging Checks
-    checkLogging()
+    logging_dict = checkLogging()
+    audit_checks["logging_configuration_checks"] = logging_dict 
 
     # Permissions (File) Checks
-    checkPermissions()
+    file_perm_dict = checkPermissions()
+    audit_checks["file_permission_checks"] = file_perm_dict 
 
     # Remote / SSH Checks
-    checkRemote()
+    ssh_checks_dict = checkRemote()
+    audit_checks["ssh_remote_checks"] = ssh_checks_dict 
 
     # Services Check
-    checkServices()
+    service_dict = checkServices()
+    audit_checks["service_configuration_checks"] = service_dict 
 
     # User-privileges Check
-    checkUserPrivileges()
+    upriv_dict = checkUserPrivileges()
+    audit_checks["user_privileges_check"] = upriv_dict 
+
+    #------------
+    # Create audit dictionary and translate to json
+    #------------
+    # Provide summary (total checks, total pass, total fail, total warning?)
+    overall_scann_info["audit_checks"] = audit_checks
+    
 
 #==============
 # Wrapper for Remediation Checks and Steps
 #==============
 def remediateWrapper():
     logging.info(f"Begining Remediation")
+
+#==============
+# Determine Linux OS
+#==============
+def getOSType():
+
+    logging.info(f"Determining operating system type")
+
+    os_ud_ret = False
+    os_rc_ret = False
+
+    #---------
+    # Define the paths of os-release for the system
+    #---------
+    os_release_path = "/etc/os-release"
+    os_contents = ingestFileToString(os_release_path)
+
+    #---------
+    # Determine Unique Identifier if available
+    #---------
+    # Make sure variable is populated
+    #   Determine OS 
+    if os_contents is not None:
+        if "ID=ubuntu" in os_contents or "ID=debian" in os_contents:
+            os_ud_ret = True
+            logging.debug("\tOperating System determined to be Ubuntu/Debian")
+        elif "ID=rhel" in os_contents or "ID=centos" in os_contents or "ID=rocky" in os_contents or "ID=almalinux" in os_contents:
+            os_rc_ret = True
+            logging.debug("\tOperating System determined to be RHEL/CentOS")
+
+    return os_ud_ret, os_rc_ret
+
+#==============
+# Function for file ingest into str
+#==============
+def ingestFileToString(passed_path):
+
+    logging.debug(f"\tPreparing for file ingest [ {passed_path} ]")
+
+    ret_str = None
+
+    #---------
+    # Define the paths of os-release for the system
+    #---------
+    file_path = Path(passed_path)
+
+    #---------
+    # Ingest File
+    #---------
+    try:
+        # Open the file and consume contents
+        with open(file_path, "r") as ifile:
+            ret_str = file.read()
+            logging.debug(f"\tReading in file [ {file_path} ]")
+    except FileNotFoundError:
+        logging.exception(f"Error: File was not found [ {file_path} ]")
+    except PermissionError:
+        logging.exception(f"Error: Permissions error for file [ {file_path} ]")
+    except Exception as e:
+        logging.exception(f"Unexpected error while reading uid file [ {e} ]")
+
+    # Return the string
+    return ret_str
+
+#==============
+# Grabs system information for the test 
+#==============
+def metaDataGenerator()
+    logging.info(f"Gathering test case metadata")
+
+    #---------
+    # Gather Info
+    #---------
+    # Hostname
+    hostname_info = platform.node()
+
+    # OS
+    os_info = platform.platform()
+
+    # Kernel Version
+    kernel_info = platform.version()
+
+    # Scan Timestamp
+    scan_time = TIMESTAMP
+
+    #---------
+    # Create dictionary
+    #---------
+    metadata = {
+        "hostname" : hostname_info,
+        "os" : os_info,
+        "kernel_version" : kernel_info,
+        "scan_timestamp" : scan_time
+    }
+
+    return metadata
+
+#==============
+# Function to quickly update the running global totals
+#==============
+def updateSummaryCounts(passed_passes, passed_failures, passed_warnings, passed_total_checks):
+
+    # Adjust globals
+    PASSES += passed_passes
+    FAILURES += passed_failures
+    WARNINGS += passed_warnings
+    TOTAL_CHECKS += passed_total_checks
+    
+    #logging.debug(f"Number of Checks : {TOTAL_CHECKS} | Checks Passed : {PASSES} | Checks Failed : {FAILURES} | Warnings : {WARNINGS}")
 
 #==========================================================================
 # Main
@@ -624,6 +918,21 @@ def main():
 
     # Determine output name (if defined or generated(
     OUTPUT = args.output if args.output else generateOutputName()
+
+    #-------------
+    # Run enviroment checks
+    #   - Run as priv user
+    #   - RHEL/CentOS vs Ubuntu/Debian
+    #-------------
+    # if script is running via sudo / root, euid == 0
+    if os.geteuid() != 0:
+        logging.error("Please run script with sudo")
+        sys.exit()
+
+    # Determine OS (UD = ubuntu/debian; RC = RHEL/CentOS)
+    global OS_UD
+    global OS_RC
+    OS_UD, OS_RC = getOSType()
 
     #-------------
     # Info
