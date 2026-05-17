@@ -265,6 +265,30 @@ def credentialMinLen():
     logging.debug(f"\tWorking on [ Credentials : Account Lockout Policy ]")
 
 #--------------
+# Logging Checks - rsyslog enabled / active
+#--------------
+def loggingRsyslogActive():
+    logging.debug(f"\tWorking on [ Logging Checks : rsyslog status ]")
+
+#--------------
+# Logging Checks - auditd installed/running
+#--------------
+def loggingAuditdActive():
+    logging.debug(f"\tWorking on [ Logging Checks : auditd status ]")
+
+#--------------
+# Logging Checks - journald persistent logging
+#--------------
+def loggingJournaldPersistence():
+    logging.debug(f"\tWorking on [ Logging Checks : journald persistence ]")
+
+#--------------
+# Logging Checks - log rotation configured
+#--------------
+def loggingLogRotation():
+    logging.debug(f"\tWorking on [ Logging Checks : log rotation ]")
+
+#--------------
 # Firewall Checks - UFW / Firewalld Enabled
 #--------------
 def firewallEnabled():
@@ -319,19 +343,19 @@ def kernelDisableSourceRouting():
     logging.debug(f"\tWorking on [ Kernel : Source Routing Disabled ]")
 
 #--------------
-# Logging Checks - Unnecessary Services
+# Service Checks - Unnecessary Services
 #--------------
 def loggingUnnecessaryServices():
     logging.debug(f"\tWorking on [ Logging : Unnecessary Services ]")
 
 #--------------
-# Logging Checks - Exposed Network Services
+# Service Checks - Exposed Network Services
 #--------------
 def loggingExposedNetworkServices():
     logging.debug(f"\tWorking on [ Logging : Exposed Network Services ]")
 
 #--------------
-# Logging Checks - Legacy Protocols
+# Service Checks - Legacy Protocols
 #--------------
 def loggingLegacyProtocols():
     logging.debug(f"\tWorking on [ Logging : Legacy Protocols ]")
@@ -466,6 +490,7 @@ def userPrivServiceAccountShell():
 def checkAutoUpdates():
     logging.info(f"Current Check : [ Auto-Updates ]")
 
+    # Create dictionary
     auto_update_dict = {}
 
     #---
@@ -476,7 +501,7 @@ def checkAutoUpdates():
     u_timer_dict = autoUpdateTimerStatus()
 
     #---
-    # Create dictionary
+    # Update dictionary
     #---
     auto_update_dict['unattended_upgrades'] = u_up_dict
     auto_update_dict['packet_manager_configured'] = pkt_man_dict
@@ -499,14 +524,65 @@ def checkAutoUpdates():
 def checkCredentialPassword():
     logging.info(f"Current Check : [ Credentials / Password ]")
 
+    credential_checks_dict = {}
+
+    #---
+    # Run the checks
+    #---
+    min_pass_len_dict = credentialMinLen()
+    pass_complexity_dict = credentialComplexity()
+    pass_expire_dict = credentialExpiration()
+    pass_reuse_prevent_dict = credentialReusePrevention()
+    account_lockout_dict = credentialMinLen()
+
+    #---
+    # Update dictionary
+    #---
+    credential_checks_dict['minimum_password_length'] = min_pass_len_dict
+    credential_checks_dict['password_complexity'] = pass_complexity_dict 
+    credential_checks_dict['password_expiration'] = pass_expire_dict 
+    credential_checks_dict['password_reuse_prevention'] = pass_reuse_prevent_dict 
+    credential_checks_dict['account_lockout_policy'] = account_lockout_dict 
+
+    # Quick check
+    logging.debug(f"Number of Checks : {TOTAL_CHECKS} | Checks Passed : {PASSES} | Checks Failed : {FAILURES} | Warnings : {WARNINGS}")
+
+    return credential_checks_dict
+
 #==========================================
 # Logging Checks
-#   - Unnecessary services
-#   - Exposed network services
-#   - Legacy protocols
+#   - rsyslog enabled
+#   - auditd installed/running
+#   - journald persistent logging
+#   - log rotation configured
 #==========================================
 def checkLogging():
     logging.info(f"Current Check : [ Logging Configuration ]")
+
+    # Create dictionary
+    logging_checks_dict = {}
+
+    #---
+    # Run the checks
+    #---
+    rs_checks = loggingRsyslogActive()
+    auditd_checks = loggingAuditdActive()
+    journald_persistence = loggingJournaldPersistence()
+    log_rotation_config = loggingLogRotation()
+
+    #---
+    # Update dictionary
+    #---
+    logging_checks_dict['rsyslog_active'] = rs_checks
+    logging_checks_dict['auditd_active'] = auditd_checks
+    logging_checks_dict['journald_persistence'] = journald_persistence
+    logging_checks_dict['log_rotation'] = log_rotation_config
+
+    # Quick check
+    logging.debug(f"Number of Checks : {TOTAL_CHECKS} | Checks Passed : {PASSES} | Checks Failed : {FAILURES} | Warnings : {WARNINGS}")
+
+    return logging_checks_dict
+
 
 #==========================================
 # Firewall Checks
@@ -519,6 +595,32 @@ def checkLogging():
 def checkFirewall():
     logging.info(f"Current Check : [ Firewall ]")
 
+    # Create dictionary
+    firewall_checks_dict = {}
+
+    #---
+    # Run the checks
+    #---
+    enabled_check = firewallEnabled()
+    active_check = firewallActive()
+    deny_check = firewallDenyDefault()
+    unnecessary_check = firewallUnnecessaryOpenPorts()
+    restricted_ssh_check = firewallSSHRestricted()
+
+    #---
+    # Update dictionary
+    #---
+    firewall_checks_dict['firewall_enabled'] = enabled_check
+    firewall_checks_dict['firewall_active'] = active_check
+    firewall_checks_dict['deny_by_default'] = deny_check
+    firewall_checks_dict['exposed_ports'] = unnecessary_check
+    firewall_checks_dict['restricted_ssh'] = restricted_ssh_check
+
+    # Quick check
+    logging.debug(f"Number of Checks : {TOTAL_CHECKS} | Checks Passed : {PASSES} | Checks Failed : {FAILURES} | Warnings : {WARNINGS}")
+
+    return logging_checks_dict
+
 #==========================================
 # Kernel / System Checks
 #   - Disable IP-Forwarding
@@ -529,6 +631,30 @@ def checkFirewall():
 def checkKernelSystem():
     logging.info(f"Current Check : [ Kernel / System ]")
 
+    # Create dictionary
+    kernel_checks_dict = {}
+
+    #---
+    # Run the checks
+    #---
+    ip_forward_checks = kernelDisableIPForward()
+    ignore_icmp_checks = kernelDisableICMPRedirect()
+    enable_syn_checks = kernelEnableSYNCookies()
+    source_routing_checks = kernelDisableSourceRouting()
+
+    #---
+    # Update dictionary
+    #---
+    kernel_checks_dict['ip_forwarding'] = ip_forward_checks
+    kernel_checks_dict['icmp_redirects'] = ignore_icmp_checks
+    kernel_checks_dict['tcp_syn_cookies'] = enable_syn_checks
+    kernel_checks_dict['source_routing'] = source_routing_checks
+
+    # Quick check
+    logging.debug(f"Number of Checks : {TOTAL_CHECKS} | Checks Passed : {PASSES} | Checks Failed : {FAILURES} | Warnings : {WARNINGS}")
+
+    return kernel_checks_dict
+
 #==========================================
 # Permissions (File) Checks
 #   - World-writable files
@@ -538,6 +664,30 @@ def checkKernelSystem():
 #==========================================
 def checkPermissions():
     logging.info(f"Current Check : [ Permissions (File) ]")
+
+    # Create dictionary
+    file_perm_checks_dict = {}
+
+    #---
+    # Run the checks
+    #---
+    world_write_checks = permissionsWorldWritableFiles()
+    ssh_perm_checks = permissionsImproperSSHKeyPermissions()
+    suid_bin_checks = permissionsSUIDSGIDBinaries()
+    file_ownership_checks = permissionsSensitiveFileOwnership()
+
+    #---
+    # Update dictionary
+    #---
+    file_perm_checks_dict['world_writable_files'] = world_write_checks 
+    file_perm_checks_dict['ssh_permissions'] = ssh_perm_checks 
+    file_perm_checks_dict['suid_binaries'] = suid_bin_checks 
+    file_perm_checks_dict['sensitive_file_ownerships'] = file_ownership_checks 
+    
+    # Quick check
+    logging.debug(f"Number of Checks : {TOTAL_CHECKS} | Checks Passed : {PASSES} | Checks Failed : {FAILURES} | Warnings : {WARNINGS}")
+
+    return file_perm_checks_dict
 
 #==========================================
 # Remote / SSH Checks
@@ -552,30 +702,44 @@ def checkPermissions():
 def checkRemote():
     logging.info(f"Current Check : [ Permissions (File) ]")
 
+    # Create dictionary
+    remote_ssh_checks_dict = {}
+
     # Will check /etc/ssh/sshd_config
     ssh_config_file_path = "/etc/ssh/sshd_config"
     ssh_config = ingestFileToString(ssh_config_file_path)
 
-    # Start json string
-    ssh_temp = "remote_ssh_checks: {\n"
+    # Make sure ssh_config is not empty
+    if ssh_config is None:
+        logging.error(f"Failed to ingest ssh configuration [ {ssh_config_file_path} ]")
+        return remote_ssh_checks_dict 
 
-    # Make sure the file was ingested
-    if ssh_config is not None:
-        ssh_temp += remoteRootLoginDisabled(ssh_config)
-        ssh_temp += remotePasswordAuthDisabled(ssh_config)
-        ssh_temp += remoteProtocolVersion(ssh_config)
-        ssh_temp += remoteEmptyPasswordsDisabled(ssh_config)
-        ssh_temp += remoteMaxAuthAttempts(ssh_config)
-        ssh_temp += remoteIdleTimeoutConfigured(ssh_config)
-        ssh_temp += remoteStrongCipher(ssh_config)
+    #---
+    # Run the checks
+    #---
+    root_login = remoteRootLoginDisabled(ssh_config)
+    pass_auth_disabled = remotePasswordAuthDisabled(ssh_config)
+    ssh_protocol_version = remoteProtocolVersion(ssh_config)
+    empty_password_disabled = remoteEmptyPasswordsDisabled(ssh_config)
+    max_auth_attempts = remoteMaxAuthAttempts(ssh_config)
+    idle_timeout_configured = remoteIdleTimeoutConfigured(ssh_config)
+    strong_cipher = remoteStrongCipher(ssh_config)
 
-    else:
-        # If nothing in the file, mark the test as failed
+    #---
+    # Update dictionary
+    #---
+    remote_ssh_checks_dict['root_login_disabled'] = root_login
+    remote_ssh_checks_dict['password_authentication_disabled'] = pass_auth_disabled
+    remote_ssh_checks_dict['ssh_protocol_version'] = ssh_protocol_version
+    remote_ssh_checks_dict['empty_passwords_disabled'] = empty_password_disabled
+    remote_ssh_checks_dict['max_authorization_attempts'] = max_auth_attempts
+    remote_ssh_checks_dict['idle_timeout_configured'] = idle_timeout_configured
+    remote_ssh_checks_dict['strong_cipher'] = strong_cipher
+    
+    # Quick check
+    logging.debug(f"Number of Checks : {TOTAL_CHECKS} | Checks Passed : {PASSES} | Checks Failed : {FAILURES} | Warnings : {WARNINGS}")
 
-    # Close the json entry
-    ssh_temp += "},"
-
-    return ssh
+    return remote_ssh_checks_dict 
 
 #==========================================
 # Service Minimization Check
@@ -585,6 +749,28 @@ def checkRemote():
 #==========================================
 def checkServices():
     logging.info(f"Current Check : [ Services ]")
+
+    # Create dictionary
+    service_minimization_checks_dict = {}
+
+    #---
+    # Run the checks
+    #---
+    unneccessary_serv_checks = servicesUnnecessary()
+    exposed_net_serv_checks servicesExposedNetworkServices()
+    legacy_protocol_checks = servicesLegacyProtocols()
+
+    #---
+    # Update dictionary
+    #---
+    service_minimization_checks_dict['unnecessary_services'] = unneccessary_serv_checks
+    service_minimization_checks_dict['exposed_network_services'] = exposed_net_serv_checks
+    service_minimization_checks_dict['legacy_protocols'] = legacy_protocol_checks
+
+    # Quick check
+    logging.debug(f"Number of Checks : {TOTAL_CHECKS} | Checks Passed : {PASSES} | Checks Failed : {FAILURES} | Warnings : {WARNINGS}")
+
+    return service_minimization_checks_dict 
 
 #==========================================
 # User-privileges Check
@@ -597,6 +783,34 @@ def checkServices():
 #==========================================
 def checkUserPrivileges():
     logging.info(f"Current Check : [ User-Privileges ]")
+
+    # Create dictionary
+    user_priv_checks_dict = {}
+
+    #---
+    # Run the checks
+    #---
+    uid_0_checks = userPrivUIDUsers()
+    sudo_users_checks = userPrivSUDOGroupMemberships()
+    inactive_accounts_checks = userPrivInactiveAccounts()
+    empty_passwords_checks = userPrivEmptyPasswords()
+    unauthorized_user_checks = userPrivUnauthorizedUsers()
+    service_accounts_checks = userPrivServiceAccountShell()
+
+    #---
+    # Update dictionary
+    #---
+    user_priv_checks_dict['uid_0_accounts'] = uid_0_checks
+    user_priv_checks_dict['sudo_users'] = sudo_users_checks
+    user_priv_checks_dict['inactive_accounts'] = inactive_accounts_checks
+    user_priv_checks_dict['empty_passwords'] = empty_passwords_checks
+    user_priv_checks_dict['unauthorized_users'] = unauthorized_user_checks
+    user_priv_checks_dict['service_accounts_with_shells'] = service_accounts_checks
+
+    # Quick check
+    logging.debug(f"Number of Checks : {TOTAL_CHECKS} | Checks Passed : {PASSES} | Checks Failed : {FAILURES} | Warnings : {WARNINGS}")
+
+    return user_priv_checks_dict 
 
 #==============
 # 'Quick' Output for Audit Checks that can be performed
@@ -640,7 +854,7 @@ def auditChecksFullWrapper():
 
     # Kernel / System Checks
     kernel_dict = checkKernelSystem()
-    audit_checks["firewall_checks"] = firewall_dict 
+    audit_checks["kernel_checks"] = kernel_dict 
 
     # Logging Checks
     logging_dict = checkLogging()
