@@ -130,7 +130,7 @@ def autoUpdateUpgrades():
         }
 
         # Update globals
-        updateSummaryCounts(1, 0, 0, 1):
+        updateSummaryCounts(1, 0, 0, 1)
 
         return unattended_upgrades_dict 
 
@@ -144,7 +144,7 @@ def autoUpdateUpgrades():
         }
 
         # Update globals
-        updateSummaryCounts(0, 1, 0, 1):
+        updateSummaryCounts(0, 1, 0, 1)
 
         return unattended_upgrades_dict 
 
@@ -181,13 +181,13 @@ def autoUpdatePackageManager():
         overall_status == "PASS"
 
         # Update globals
-        updateSummaryCounts(1, 0, 0, 1):
+        updateSummaryCounts(1, 0, 0, 1)
 
     else:
         overall_status == "FAIL"
 
         # Update globals
-        updateSummaryCounts(0, 1, 0, 1):
+        updateSummaryCounts(0, 1, 0, 1)
 
     pkg_mngr_dict = {
         "expected" : expected_mngr,
@@ -215,14 +215,14 @@ def autoUpdateTimerStatus():
         status = "PASSED"
 
         # Update globals
-        updateSummaryCounts(1, 0, 0, 1):
+        updateSummaryCounts(1, 0, 0, 1)
 
     else:
         timer_activity = "inactive"
         status = "FAILED"
 
         # Update globals
-        updateSummaryCounts(0, 1, 0, 1):
+        updateSummaryCounts(0, 1, 0, 1)
 
     # Create dictionary
     timer_status_dict = {
@@ -236,32 +236,254 @@ def autoUpdateTimerStatus():
 
 #--------------
 # Credential Checks - minimum password length 
+#   /etc/security/pwquality.conf : 'minlen' (12 or 14)
 #--------------
 def credentialMinLen():
     logging.debug(f"\tWorking on [ Credentials : Minimum Password Length ]")
 
+    cred_path = "/etc/security/pwquality"
+    search_minlen = "minlen"
+
+    # Overall check values
+    minlen_expected = 12
+    minlen_actual = 0
+    minlen_status = "FAIL"
+
+    # First ingest the file
+    min_len_ingest = isolateStringInFile(cred_path, [search_minlen])
+
+    # Check to make sure setting was found
+    if min_len_ingest is not None:
+
+        # Isolate the minimum length
+        minlen_actual = int(min_len_ingest.replace("minlen = ","")
+
+        # Make sure min length is greater than 12
+        if minlen_actual >= 12:
+            # Adjust status to PASS
+            minlen_status = "PASS"
+
+            # Update globals
+            updateSummaryCounts(1, 0, 0, 1)
+
+        # IF the minlen is less than 12, mark check as fail in globals
+        else:
+            # Update globals
+            updateSummaryCounts(0, 1, 0, 1)
+
+    else:
+        logging.debug(f"Failed to find '{search_minlen}' in file [ {cred_path} ]")
+
+        # Update globals
+        updateSummaryCounts(0, 1, 0, 1)
+
+
+    # Create dictionary
+    credential_len_dict = {
+        "expected" : minlen_expected,
+        "actual" : minlen_actual,
+        "status" : minlen_status
+    }
+
+    return credential_len_dict 
+
 #--------------
 # Credential Checks - password complexity
+#   /etc/security/pwquality.conf : 'dcredit', 'ucredit', 'lcredit', 'ocredit' (set to -1 = at least 1)
+#   /etc/security/pwquality.conf : minlower, minupper, mindigit, minspecial
 #--------------
 def credentialComplexity():
     logging.debug(f"\tWorking on [ Credentials : Password Complexity ]")
 
+    credential_complexity_dict = {}
+
+    # Define path to conf file
+    complexity_path = "/etc/security/pwquality"
+    search_strings = ["minclass","mindigit","minlower","minupper","minspecial"]
+
+    # Search the file for the strings
+    found_strings = isolateStringInFile(complexity_path, search_strings)
+
+    # Make sure results were actually returned
+    if len(found_strings) != len(search_strings):
+        logging.error(f"Failed to isolate password complexity configurations [ {complexity_path} ]")
+
+        # Update globals
+        updateSummaryCounts(0, len(search_strings), 0, len(search_strings))
+
+    # Process the returned strings
+    comp_minclasses = int(found_strings[0].replace("minclass = ",""))
+    comp_mindigit = int(found_strings[1].replace("mindigit = ",""))
+    comp_minlower = int(found_strings[2].replace("minlower = ",""))
+    comp_minupper = int(found_strings[3].replace("minupper = ",""))
+    comp_minspecial = int(found_strings[4].replace("minspecial = ",""))
+
+    ######
+    # Determine status
+    ######
+    #-----
+    # Character class
+    #-----
+    expected_class = 4
+    status_class = "FAILED"
+    if comp_minclass == expected_class:
+        status_class = "PASSED"
+        # Update globals
+        updateSummaryCounts(1, 0, 0, 1)
+    else:
+        # Update globals
+        updateSummaryCounts(0, 1, 0, 1)
+
+    complex_class_dict = {
+        "expected" : expected_class,
+        "actual" : comp_minclasses,
+        "status" : status_class
+    }
+
+    #-----
+    # Digit Required 
+    #-----
+    expected_digit = 1
+    status_digit = "FAILED"
+    if comp_mindigit == expected_digit:
+        status_digit = "PASSED"
+        # Update globals
+        updateSummaryCounts(1, 0, 0, 1)
+    else:
+        # Update globals
+        updateSummaryCounts(0, 1, 0, 1)
+
+    complex_digit_dict = {
+        "expected" : expected_digit,
+        "actual" : comp_mindigit,
+        "status" : status_digit
+    }
+
+    #-----
+    # Lowercase Letter Required 
+    #-----
+    expected_lower = 1
+    status_lower = "FAILED"
+    if comp_minlower == expected_lower:
+        status_lower = "PASSED"
+        # Update globals
+        updateSummaryCounts(1, 0, 0, 1)
+    else:
+        # Update globals
+        updateSummaryCounts(0, 1, 0, 1)
+
+    complex_lower_dict = {
+        "expected" : expected_lower,
+        "actual" : comp_minlower,
+        "status" : status_lower
+    }
+
+    #-----
+    # Uppercase Letter Required 
+    #-----
+    expected_upper = 1
+    status_upper = "FAILED"
+    if comp_minupper == expected_upper:
+        status_upper = "PASSED"
+        # Update globals
+        updateSummaryCounts(1, 0, 0, 1)
+    else:
+        # Update globals
+        updateSummaryCounts(0, 1, 0, 1)
+
+    complex_upper_dict = {
+        "expected" : expected_upper,
+        "actual" : comp_minupper,
+        "status" : status_upper
+    }
+
+    #-----
+    # Special Letter Required 
+    #-----
+    expected_special = 1
+    status_special = "FAILED"
+    if comp_minspecial == expected_special:
+        status_special = "PASSED"
+        # Update globals
+        updateSummaryCounts(1, 0, 0, 1)
+    else:
+        # Update globals
+        updateSummaryCounts(0, 1, 0, 1)
+
+    complex_special_dict = {
+        "expected" : expected_special,
+        "actual" : comp_minspecial,
+        "status" : status_special
+    }
+
+    ######
+    # Create final dictionary
+    ######
+    credential_complexity_dict['required_character_classes'] = complex_class_dict 
+    credential_complexity_dict['required_character_digit'] = complex_digit_dict 
+    credential_complexity_dict['required_character_lowercase'] = complex_lower_dict 
+    credential_complexity_dict['required_character_uppercase'] = complex_upper_dict 
+    credential_complexity_dict['required_character_special'] = complex_special_dict 
+
+    return credential_complexity_dict 
+
 #--------------
 # Credential Checks - password expiration
+#   /etc/login.defs : 'PASS_MAX_DAYS'
 #--------------
 def credentialExpiration():
     logging.debug(f"\tWorking on [ Credentials : Expiration ]")
 
+    # Define path to conf file
+    expire_path = "/etc/login.defts"
+    search_strings = ["PASS_MAX_DAYS"]
+
+    # Search the file for the string
+    found_strings = isolateStringInFile(expire_path, search_strings)
+
+    # Ensure something was returned
+    if len(search_strings) != len(found_strings)
+        logging.error(f"Failed to isolate password expiration configurations [ {expire_path} ]")
+
+        # Update globals
+        updateSummaryCounts(0, len(search_strings), 0, len(search_strings))
+
+    # Determine check status
+    expected_expire = 90
+    actual_expire = int(found_strings[0].replace("PASS_MAX_DAYS","").strip())
+    status_expire = "PASSED"
+
+    # The the actual setting is less than 90 days = failure
+    if actual_expire < expected_expire:
+        status_expire = "FAILED"
+        # Update globals
+        updateSummaryCounts(0, 1, 0, 1)
+    else:
+        updateSummaryCounts(1, 0, 0, 1)
+
+    # Put it all together in a dictionary
+    password_expiration_dict = {
+        "expected" : expected_expire,
+        "actual" : actual_expire,
+        "status" : status_expire
+    }
+
+    return password_expiration_dict 
+
 #--------------
 # Credential Checks - password reuse prevention
+#   /etc/security/pwhistory.conf : 'remember' = 5
 #--------------
 def credentialReusePrevention():
     logging.debug(f"\tWorking on [ Credentials : Password Reuse Prevention ]")
 
 #--------------
 # Credential Checks - account lockout policy
+#   /etc/pam.d/common-auth OR /etc/pam.d/system_auth
+#   'deny=5' e.g. locks account after 5 failed attempts
+#   'unlock_time=600' e.g. locks account for 10 mins
 #--------------
-def credentialMinLen():
+def credentialLockout():
     logging.debug(f"\tWorking on [ Credentials : Account Lockout Policy ]")
 
 #--------------
@@ -533,7 +755,7 @@ def checkCredentialPassword():
     pass_complexity_dict = credentialComplexity()
     pass_expire_dict = credentialExpiration()
     pass_reuse_prevent_dict = credentialReusePrevention()
-    account_lockout_dict = credentialMinLen()
+    account_lockout_dict = credentialLockout()
 
     #---
     # Update dictionary
@@ -881,7 +1103,12 @@ def auditChecksFullWrapper():
     #------------
     # Provide summary (total checks, total pass, total fail, total warning?)
     overall_scann_info["audit_checks"] = audit_checks
-    
+
+    # Create the JSON output
+    audit_ouput_json = json.dumps(overall_scan_info, indent=4, sort_keys=True)
+
+    # Quick print check
+    print(audit_ouput_json)
 
 #==============
 # Wrapper for Remediation Checks and Steps
@@ -951,6 +1178,47 @@ def ingestFileToString(passed_path):
 
     # Return the string
     return ret_str
+
+#==============
+# 'Ingest' file to search for and isolate particular line / string
+#==============
+def isolateStringInFile(passed_path, search_array):
+
+    logging.debug(f"\tPreparing for string isolation in file[ {passed_path} ]")
+
+    ret_strings = []
+
+    #---------
+    # Define the paths of os-release for the system
+    #---------
+    file_path = Path(passed_path)
+
+    #---------
+    # Ingest File Line by line and isolate search_string if present
+    #---------
+    try:
+        # Open the file 
+        with open(file_path, "r") as ifile:
+            # Iterate line-by-line
+            for line in ifile:
+                # Iterate through search_array
+                for search_str in search_array:
+                    # Check each line for the search string
+                    if search_string in line:
+                        ret_str.append( line.strip())
+                        break
+
+            logging.debug(f"\tSearching file for search string [ {search_string} ]")
+
+    except FileNotFoundError:
+        logging.exception(f"Error: File was not found [ {file_path} ]")
+    except PermissionError:
+        logging.exception(f"Error: Permissions error for file [ {file_path} ]")
+    except Exception as e:
+        logging.exception(f"Unexpected error while reading uid file [ {e} ]")
+
+    # Return the string
+    return ret_strings
 
 #==============
 # Grabs system information for the test 
