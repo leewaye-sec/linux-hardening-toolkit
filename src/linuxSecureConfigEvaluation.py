@@ -1,7 +1,7 @@
 #!/usr/local/bin/python3
 #==========================================================================
 #
-#           File : main.py
+#           File : linuxSecureconfigEvaluation.py
 #        Project : Linux Hardening Toolkit
 #    Description : Checks multiple system / net settings, configures 
 #                  to be in the more secure configuration
@@ -25,6 +25,7 @@ import subprocess
 import json
 import platform
 import shutil
+import services.py
 
 #--------------------
 # Global Variables
@@ -242,40 +243,50 @@ def credentialMinLen():
     logging.debug(f"\tWorking on [ Credentials : Minimum Password Length ]")
 
     cred_path = "/etc/security/pwquality"
-    search_minlen = "minlen"
-
-    # Overall check values
-    minlen_expected = 12
-    minlen_actual = 0
-    minlen_status = "FAIL"
+    search_minlen = ["minlen"]
 
     # First ingest the file
-    min_len_ingest = isolateStringInFile(cred_path, [search_minlen])
+    min_len_ingest = isolateStringInFile(cred_path, search_minlen)
 
     # Check to make sure setting was found
-    if min_len_ingest is not None:
+    if len(min_len_ingest) != len(search_minlen):
+        logging.debug(f"Failed to find '{search_minlen}' in file [ {cred_path} ]")
+        # Update globals
+        updateSummaryCounts(0, 1, 0, 1)
+        failure_dict = {
+            "audit_check" : "Credential Minimum Length" 
+            "audit_check_status" : "FAIL" 
+        }
+        return failure_dict
 
-        # Isolate the minimum length
-        minlen_actual = int(min_len_ingest.replace("minlen = ","")
+    min_len = min_len_ingest[0]
 
-        # Make sure min length is greater than 12
-        if minlen_actual >= 12:
-            # Adjust status to PASS
-            minlen_status = "PASS"
+    # Overall check values
+    minlen_expected_int = 12
+    minlen_actual_int = 0
 
+    minlen_expected = "enabled/configured"
+    minlen_actual = "enabled/configured"
+    minlen_status = "PASS"
+
+    # First check: if it's commented out
+    if min_len.startswith('#')
+        # Update globals
+        updateSummaryCounts(0, 1, 0, 1)
+        actual_class = "disabled/not configured"
+        status_class = "FAIL"
+
+    else:
+        minlen_actual_int = int(min_len.replace("minlen = ","").strip())
+
+        if minlen_actual_int <= minlen_expected_int:
             # Update globals
             updateSummaryCounts(1, 0, 0, 1)
-
-        # IF the minlen is less than 12, mark check as fail in globals
         else:
             # Update globals
             updateSummaryCounts(0, 1, 0, 1)
-
-    else:
-        logging.debug(f"Failed to find '{search_minlen}' in file [ {cred_path} ]")
-
-        # Update globals
-        updateSummaryCounts(0, 1, 0, 1)
+            actual_len = "enabled/not configured"
+            status_len = "FAIL"
 
 
     # Create dictionary
@@ -299,7 +310,7 @@ def credentialComplexity():
 
     # Define path to conf file
     complexity_path = "/etc/security/pwquality"
-    search_strings = ["minclass","mindigit","minlower","minupper","minspecial"]
+    search_strings = ["minclass","dcredit","lcredit","ucredit","ocredit"]
 
     # Search the file for the strings
     found_strings = isolateStringInFile(complexity_path, search_strings)
@@ -310,13 +321,18 @@ def credentialComplexity():
 
         # Update globals
         updateSummaryCounts(0, len(search_strings), 0, len(search_strings))
+        failure_dict = {
+            "audit_check" : "Credential Complexity" 
+            "audit_check_status" : "FAIL" 
+        }
+        return failure_dict
 
     # Process the returned strings
-    comp_minclasses = int(found_strings[0].replace("minclass = ",""))
-    comp_mindigit = int(found_strings[1].replace("mindigit = ",""))
-    comp_minlower = int(found_strings[2].replace("minlower = ",""))
-    comp_minupper = int(found_strings[3].replace("minupper = ",""))
-    comp_minspecial = int(found_strings[4].replace("minspecial = ",""))
+    comp_minclasses = found_strings[0]
+    comp_mindigit = found_strings[1]
+    comp_minlower = found_strings[2]
+    comp_minupper = found_strings[3]
+    comp_minspecial = found_strings[4]
 
     ######
     # Determine status
@@ -324,95 +340,166 @@ def credentialComplexity():
     #-----
     # Character class
     #-----
-    expected_class = 4
-    status_class = "FAILED"
-    if comp_minclass == expected_class:
-        status_class = "PASSED"
-        # Update globals
-        updateSummaryCounts(1, 0, 0, 1)
-    else:
+    min_class = -1 
+    expected_class = "enabled/configured"
+    actual_class = "enabled/configured"
+    status_class = "PASS"
+
+    # First check: if it's commented out
+    if comp_minclasses.startswith('#')
         # Update globals
         updateSummaryCounts(0, 1, 0, 1)
+        actual_class = "disabled/not configured"
+        status_class = "FAIL"
+
+    else:
+        setting_class = int(comp_minclasses.replace("minclass = ","").strip())
+
+        if setting_class <= min_class:
+            # Update globals
+            updateSummaryCounts(1, 0, 0, 1)
+        else:
+            # Update globals
+            updateSummaryCounts(0, 1, 0, 1)
+            actual_class = "enabled/not configured"
+            status_class = "FAIL"
 
     complex_class_dict = {
         "expected" : expected_class,
-        "actual" : comp_minclasses,
+        "actual" : actual_class,
         "status" : status_class
     }
 
     #-----
     # Digit Required 
     #-----
-    expected_digit = 1
-    status_digit = "FAILED"
-    if comp_mindigit == expected_digit:
-        status_digit = "PASSED"
-        # Update globals
-        updateSummaryCounts(1, 0, 0, 1)
-    else:
+    min_digit = -1
+
+    expected_digit = "enabled/configured"
+    actual_digit = "enabled/configured"
+    status_digit = "PASS"
+
+    # First check: if it's commented out
+    if comp_mindigit.startswith('#')
         # Update globals
         updateSummaryCounts(0, 1, 0, 1)
+        actual_digit = "disabled/not configured"
+        status_digit = "FAIL"
+
+    else:
+        setting_digit = int(comp_mindigit.replace("dcredit = ","").strip())
+
+        if setting_digit <= min_digit:
+            # Update globals
+            updateSummaryCounts(1, 0, 0, 1)
+        else:
+            # Update globals
+            updateSummaryCounts(0, 1, 0, 1)
+            actual_digit = "enabled/not configured"
+            status_digit = "FAIL"
 
     complex_digit_dict = {
         "expected" : expected_digit,
-        "actual" : comp_mindigit,
+        "actual" : actual_digit,
         "status" : status_digit
     }
 
     #-----
     # Lowercase Letter Required 
     #-----
-    expected_lower = 1
-    status_lower = "FAILED"
-    if comp_minlower == expected_lower:
-        status_lower = "PASSED"
-        # Update globals
-        updateSummaryCounts(1, 0, 0, 1)
-    else:
+    min_lower = -1 
+    expected_lower = "enabled/configured"
+    actual_lower = "enabled/configured"
+    status_lower = "PASS"
+
+    # First check: if it's commented out
+    if comp_minlower.startswith('#')
         # Update globals
         updateSummaryCounts(0, 1, 0, 1)
+        actual_lower = "disabled/not configured"
+        status_lower = "FAIL"
+
+    else:
+        setting_lower = int(comp_minlower.replace("lcredit = ","").strip())
+
+        if setting_lower <= min_lower:
+            # Update globals
+            updateSummaryCounts(1, 0, 0, 1)
+        else:
+            # Update globals
+            updateSummaryCounts(0, 1, 0, 1)
+            actual_lower = "enabled/not configured"
+            status_lower = "FAIL"
 
     complex_lower_dict = {
         "expected" : expected_lower,
-        "actual" : comp_minlower,
+        "actual" : actual_lower,
         "status" : status_lower
     }
 
     #-----
     # Uppercase Letter Required 
     #-----
-    expected_upper = 1
-    status_upper = "FAILED"
-    if comp_minupper == expected_upper:
-        status_upper = "PASSED"
-        # Update globals
-        updateSummaryCounts(1, 0, 0, 1)
-    else:
+    min_upper = -1 
+    expected_upper = "enabled/configured"
+    actual_upper = "enabled/configured"
+    status_upper = "PASS"
+
+    # First check: if it's commented out
+    if comp_minupper.startswith('#')
         # Update globals
         updateSummaryCounts(0, 1, 0, 1)
+        actual_upper = "disabled/not configured"
+        status_upper = "FAIL"
+
+    else:
+        setting_upper = int(comp_minupper.replace("ucredit = ","").strip())
+
+        if setting_upper <= min_upper:
+            # Update globals
+            updateSummaryCounts(1, 0, 0, 1)
+        else:
+            # Update globals
+            updateSummaryCounts(0, 1, 0, 1)
+            actual_upper = "enabled/not configured"
+            status_upper = "FAIL"
 
     complex_upper_dict = {
         "expected" : expected_upper,
-        "actual" : comp_minupper,
+        "actual" : actual_upper,
         "status" : status_upper
     }
 
     #-----
     # Special Letter Required 
     #-----
-    expected_special = 1
-    status_special = "FAILED"
-    if comp_minspecial == expected_special:
-        status_special = "PASSED"
-        # Update globals
-        updateSummaryCounts(1, 0, 0, 1)
-    else:
+    min_special = -1 
+    expected_special = "enabled/configured"
+    actual_special = "enabled/configured"
+    status_special = "PASS"
+
+    # First check: if it's commented out
+    if comp_minspecial.startswith('#')
         # Update globals
         updateSummaryCounts(0, 1, 0, 1)
+        actual_special = "disabled/not configured"
+        status_special = "FAIL"
+
+    else:
+        setting_special = int(comp_minspecial.replace("ocredit = ","").strip())
+
+        if setting_special <= min_special:
+            # Update globals
+            updateSummaryCounts(1, 0, 0, 1)
+        else:
+            # Update globals
+            updateSummaryCounts(0, 1, 0, 1)
+            actual_special = "enabled/not configured"
+            status_special = "FAIL"
 
     complex_special_dict = {
         "expected" : expected_special,
-        "actual" : comp_minspecial,
+        "actual" : actual_special,
         "status" : status_special
     }
 
@@ -447,19 +534,39 @@ def credentialExpiration():
 
         # Update globals
         updateSummaryCounts(0, len(search_strings), 0, len(search_strings))
+        failure_dict = {
+            "audit_check" : "Credential Expiration" 
+            "audit_check_status" : "FAIL" 
+        }
+        return failure_dict
 
     # Determine check status
-    expected_expire = 90
-    actual_expire = int(found_strings[0].replace("PASS_MAX_DAYS","").strip())
-    status_expire = "PASSED"
+    expire_days = 90
+    found_expire_days = found_strings[0]
 
-    # The the actual setting is less than 90 days = failure
-    if actual_expire < expected_expire:
-        status_expire = "FAILED"
+    expected_expire = "enabled/configured"
+    actual_expire = "enabled/configured"
+    status_expire = "PASS"
+
+    # First check: if it's commented out
+    if found_expire_days.startswith('#')
         # Update globals
         updateSummaryCounts(0, 1, 0, 1)
+        actual_expire = "disabled/not configured"
+        status_expire = "FAIL"
+
     else:
-        updateSummaryCounts(1, 0, 0, 1)
+        setting_expire = int(found_expire_days.replace("PASS_MAX_DAYS","").strip())
+
+        if setting_expire <= expire_days:
+            # Update globals - success
+            updateSummaryCounts(1, 0, 0, 1)
+        else:
+            # Update globals
+            updateSummaryCounts(0, 1, 0, 1)
+            actual_expire = f"enabled/not properly configured [ {setting_expire} days ]"
+            status_expire = "FAIL"
+
 
     # Put it all together in a dictionary
     password_expiration_dict = {
@@ -472,19 +579,149 @@ def credentialExpiration():
 
 #--------------
 # Credential Checks - password reuse prevention
-#   /etc/security/pwhistory.conf : 'remember' = 5
+#   Ubuntu : /etc/pam.d/common-password
+#   RHEL   : /etc/pam.d/system-auth
 #--------------
 def credentialReusePrevention():
     logging.debug(f"\tWorking on [ Credentials : Password Reuse Prevention ]")
 
+    #=======
+    # Define search parameters
+    #=======
+    # Set path based on operating system
+    if OS_UD:
+        path = "/etc/pam.d/common-password"
+    elif OS_RC:
+        path = "/etc/pam.d/system-auth"
+
+    search_string = ["remember="]
+
+    #=======
+    # Search for string(s) in specified file
+    #=======
+    found_strings = isolateStringInFile(path, search_string)
+
+    # Ensure something was returned
+    if len(search_string) != len(found_strings)
+        logging.error(f"Failed to isolate password reuse configurations [ {path} ]")
+
+        # Update globals
+        updateSummaryCounts(0, len(search_strings), 0, len(search_strings))
+
+        failure_dict = {
+            "audit_check" : "Credential Reuse" 
+            "audit_check_status" : "FAIL" 
+        }
+        return failure_dict
+
+    reuse_num = 5
+    found_reuse = found_strings[0]
+
+    expected_reuse = "enabled/configured"
+    actual_reuse = "enabled/configured"
+    status_reuse = "PASS"
+
+    # Make sure it isn't commented out
+    if found_reuse.startswith('#')
+        # Update globals
+        updateSummaryCounts(0, 1, 0, 1)
+        actual_expire = "disabled/not configured"
+        status_expire = "FAIL"
+
+    else:
+        setting_reuse = int(found_reuse.replace("remember=","").strip())
+
+        if setting_reuse >= reuse_num:
+            # Update globals - success
+            updateSummaryCounts(1, 0, 0, 1)
+        else:
+            # Update globals
+            updateSummaryCounts(0, 1, 0, 1)
+            actual_reuse = f"enabled/not properly configured"
+            status_reuse = "FAIL"
+
+
+    # Put it all together in a dictionary
+    password_reuse_dict = {
+        "expected" : expected_reuse,
+        "actual" : actual_reuse,
+        "status" : status_reuse
+    }
+
+    return password_reuse_dict 
+    
+
 #--------------
 # Credential Checks - account lockout policy
-#   /etc/pam.d/common-auth OR /etc/pam.d/system_auth
+#   path : /etc/security/faillock.conf
 #   'deny=5' e.g. locks account after 5 failed attempts
 #   'unlock_time=600' e.g. locks account for 10 mins
 #--------------
 def credentialLockout():
     logging.debug(f"\tWorking on [ Credentials : Account Lockout Policy ]")
+
+    #=======
+    # Define search parameters
+    #=======
+    # Set path based on operating system
+    path = "/etc/security/faillock.conf"
+
+    search_string = ["deny"]
+
+    #=======
+    # Search for string(s) in specified file
+    #=======
+    found_strings = isolateStringInFile(path, search_string)
+
+    # Ensure something was returned
+    if len(search_string) != len(found_strings)
+        logging.error(f"Failed to isolate password lockout configurations [ {path} ]")
+
+        # Update globals
+        updateSummaryCounts(0, len(search_strings), 0, len(search_strings))
+
+        failure_dict = {
+            "audit_check" : "Credential Lockout" 
+            "audit_check_status" : "FAIL" 
+        }
+        return failure_dict
+
+    lockout_num = 3
+    found_lockout = found_strings[0]
+
+    expected_lockout = "enabled/configured"
+    actual_lockout = "enabled/configured"
+    status_lockout = "PASS"
+
+    # Make sure it isn't commented out
+    if found_lockout.startswith('#')
+        # Update globals
+        updateSummaryCounts(0, 1, 0, 1)
+        actual_lockout = "disabled/not configured"
+        status_lockout = "FAIL"
+
+    else:
+        setting_lockout = int(found_lockout.replace("deny = ","").strip())
+
+        if setting_lockout >= lockout_num:
+            # Update globals - success
+            updateSummaryCounts(1, 0, 0, 1)
+        else:
+            # Update globals
+            updateSummaryCounts(0, 1, 0, 1)
+            actual_lockout = f"enabled/not properly configured"
+            status_lockout = "FAIL"
+
+
+    # Put it all together in a dictionary
+    password_lockout_dict = {
+        "expected" : expected_lockout,
+        "actual" : actual_lockout,
+        "status" : status_lockout
+    }
+
+    return password_lockout_dict 
+    
 
 #--------------
 # Logging Checks - rsyslog enabled / active
@@ -516,11 +753,108 @@ def loggingLogRotation():
 def firewallEnabled():
     logging.debug(f"\tWorking on [ Firewall : Service Enabled ]")
 
+    #=====
+    # Determine command string
+    #=====
+    firewall_service = None
+    # ufw
+    if OS_UD:
+        cmd_str = ["systemctl", "status", "ufw"]
+        firewall_service = "ufw"
+    # firewalld
+    elif OS_RC:
+        cmd_str = ["systemctl", "status", "firewalld"]
+        firewall_service = "firewalld"
+
+    #=====
+    # Determine if service is enabled
+    #=====
+    firewall_expected = "enabled"
+    firewall_actual = "enabled"
+    firewall_status = "PASS"
+    try:
+        enabled_output = subprocess.check_output(cmd_str, text=True)
+        if 'enabled' in enabled_output:
+            # Update global
+            updateSummaryCounts(1, 0, 0, 1)
+        else:
+            # Update global
+            updateSummaryCounts(0, 1, 0, 1)
+            firewall_actual = "disabled"
+            firewall_status = "FAIL"
+
+    except Exception as e:
+        logging.exception(f"Failed to determine if [ {firewall_service} ] is enabled [ {e} ]")
+        # Update global
+        updateSummaryCounts(0, 1, 0, 1)
+        firewall_actual = "disabled"
+        firewall_status = "FAIL"
+    
+    # Create dictionary for return
+    firewall_enabled = {
+        'expected' : firewall_expected,
+        'actual' : firewall_actuale,
+        'expected' : firewall_status
+    }
+
+    return firewall_enabled
+
 #--------------
 # Firewall Checks - Firewall active
 #--------------
 def firewallActive():
     logging.debug(f"\tWorking on [ Firewall : Service Active ]")
+
+    #=====
+    # Determine checks for OS
+    #=====
+    firewall_service = None
+    # ufw
+    if OS_UD:
+        cmd_str = ["ufw", "status"]
+        output_search_str = "Status: active"
+        firewall_service = "ufw"
+
+    # firewalld
+    elif OS_RC:
+        cmd_str = ["firewall-cmd", "--state"]
+        output_search_str = "running"
+        firewall_service = "firewalld"
+
+    #=====
+    # Determine if service is active
+    #=====
+    firewall_expected = "active"
+    firewall_actual = "active"
+    firewall_status = "PASS"
+    try:
+        active_output = subprocess.check_output(cmd_str, text=True)
+
+        if output_search_str in active_output:
+            # Update global
+            updateSummaryCounts(1, 0, 0, 1)
+        else:
+            # Update global
+            updateSummaryCounts(0, 1, 0, 1)
+            firewall_actual = "inactive"
+            firewall_status = "FAIL"
+
+    except Exception as e:
+        logging.exception(f"Failed to determine if [ {firewall_service} ] is active [ {e} ]")
+        # Update global
+        updateSummaryCounts(0, 1, 0, 1)
+        firewall_actual = "inactive"
+        firewall_status = "FAIL"
+    
+    # Create dictionary for return
+    firewall_active = {
+        'expected' : firewall_expected,
+        'actual' : firewall_actuale,
+        'expected' : firewall_status
+    }
+
+    return firewall_enabled
+    
 
 #--------------
 # Firewall Checks - deny-by-default
@@ -528,17 +862,247 @@ def firewallActive():
 def firewallDenyDefault():
     logging.debug(f"\tWorking on [ Firewall : Deny-by-default ]")
 
+    #=====
+    # Process based on OS
+    #=====
+    firewall_service = None
+    deny_expected = "deny-by-default"
+    deny_actual = "deny-by-default"
+    deny_status = "PASS"
+
+    # ufw
+    if OS_UD:
+        cmd_str = ["ufw", "status", "verbose"]
+        search_str = "Default: deny (incoming)"
+
+        try:
+            deny_output = subprocess.check_output(cmd_str, text=True)
+
+            if search_str in deny_output:
+                # Update global
+                updateSummaryCounts(1, 0, 0, 1)
+            else:
+                # Update global
+                updateSummaryCounts(0, 1, 0, 1)
+                deny_actual = "allow-by-default"
+                deny_status = "FAIL"
+
+        except:
+            logging.error("UFW not active")
+            # Update global
+            updateSummaryCounts(0, 1, 0, 1)
+            deny_actual = "Unable to determine"
+            deny_status = "FAIL"
+
+    # firewalld
+    elif OS_RC:
+
+        zone_cmd_str = ['firewall-cmd', '--get-default-zone']
+        search_strs = ['DROP', 'REJECT', '%%REJECT%%']
+        try:
+            # Get the default zone name
+            zone = subprocess.check_output(zone_cmd_str, text=True).strip()
+
+            cmd_str = ['firewall-cmd', f'--zone={zone}', '--get-target']
+
+            # Check the 'target' of that default zone
+            target = subprocess.check_output(cmd_str, text=True).strip()
+
+            if target in search_strs:
+                # Update global
+                updateSummaryCounts(1, 0, 0, 1)
+            else:
+                updateSummaryCounts(0, 1, 0, 1)
+                deny_actual = "allow-by-default"
+                deny_status = "FAIL"
+
+        except:
+            logging.error("firewalld not active")
+            # Update global
+            updateSummaryCounts(0, 1, 0, 1)
+            deny_actual = "Unable to determine"
+            deny_status = "FAIL"
+
+    firewall_deny_dict = {
+        "expected" : deny_expected,
+        "actual" : deny_actual,
+        "status" : deny_status
+    }
+
+    return firewall_deny_dict
+
+#--------------
+# Firewall Checks - Provide nested dictionaries of some ports and their associated info
+#--------------
+def firewallGatherListeningPorts():
+    logging.debug(f"\tRetrieving current system ports")
+
+    port_cmd = ["ss", "-tulpn"]
+    system_ports = []
+
+    # Run the command, gather output, process
+    try:
+        ports_output = subprocess.run(port_cmd, capture_output=True, text=True)
+        output_split = ports_output.stdout.strip().split('\n')
+
+        # Process the output into dictionaries (skip the table header line)
+        for line in lines[1:]:
+
+            # Skip lines that are not state LISTEN
+            if "LISTEN" not in line:
+                continue
+
+            columns = line.split()
+            # Make sure we have the proper number of columns (at least 6)
+            if len(columns) >= 6:
+                system_ports.append({
+                    "Netid": columns[0],
+                    "State": columns[1],
+                    "Recv-Q": columns[2],
+                    "Send-Q": columns[3],
+                    "Local Address:Port": columns[4],
+                    "Peer Address:Port": columns[5],
+                    "Process": columns[6] if len(columns) > 6 else ""
+                })
+
+    except Exception as e:
+
+        logging.exception(f"Failed to retreive system ports [ {e} ]")
+
+    return system_ports
+
 #--------------
 # Firewall Checks - Unnecessary Open Ports
 #--------------
-def firewallUnnecessaryOpenPorts():
+def firewallListeningPorts():
     logging.debug(f"\tWorking on [ Firewall : Unnecessary Open Ports ]")
+
+    #=============
+    # Prepare for checks
+    #=============
+    # Returns port dictionary with nested dictionaries keyed by port number
+    ports_info = services.standardPortDefinitionInformation()
+    listening_ports = firewallGatherListeningPorts()
+
+    isolated_ports = []
+    #=============
+    # Prepare for checks
+    #=============
+    for lport in listening_ports:
+        # Split to have local address and port
+        laddr_split = lport['Local Address:Port'].split(':')
+        isolated_ports.append(laddr_split[1])
+
+    # Remove duplicates if present
+    isolated_unique_ports = list(set(isolated_ports))
+
+    #=============
+    # Create information
+    #   FIGURE OUT HOW TO MAKE THIS HAPPY FOR JSON
+    #=============
+    # Grab the info from ports_info
+    #   If not in ports_info, fill out as unknown
+    # Define unknown ports for 
+    ports_report = {}
+    ports_report['status'] = "INFO"
+    # Iterate the port numbers present on system
+    for port in isolated_unique_ports:
+
+        # If port has information, grab it
+        if port in ports_info:
+            specific_port_dict = ports_info[port]
+            ports_report[port] = specific_port_dict 
+
+        # No info on the listed port
+        else:
+            temp_unk = {
+                "classification": "unknown",
+                "port" = port,
+                "service" = "unkown",
+                "protocol": "unkown",
+                "service": "unkown",
+                "risk_level": "WARN",
+                "recommended": "unknown",
+                "recommendation": "Investigate unidentified listening service"
+            }
+
+            ports_report[port] = temp_unk 
+
+    # Return dictionary
+    return ports_report
+
+#--------------
+# Checks if SSH is listening / reachable
+#--------------
+def firewallSSHRest_listening():
+    logging.debug(f"\t\tChecking Firewall SSH Restrictions [ Listening ]")
+
+    # Grab all listening ports, then search for the ssh port
+    listening_ports = firewallGatherListeningPorts()
+
+    ssh_listen_dict = {}
+
+    ssh_interface = None
+    ssh_port = "22"
+
+    ssh_status = "FAIL"
+
+    # Search listening ports for ssh (22)
+    for lport in listening_ports:
+        # If it isn't ssh, skip
+        if f":{ssh_port}" in lport['Local Address:Port']:
+            ssh_interface = lport['Local Address:Port'].split(':')[0]
+            ssh_status = "PASS"
+            break
+    
+    # Populate dictionary to return
+    ssh_listen_dict['status'] = ssh_status
+    ssh_listen_dict['interface'] = ssh_interface
+    ssh_listen_dict['status'] = ssh_port
+
+    return ssh_listen_dict
+
+#--------------
+# Checks if ssh is restricted to specific IPs
+#--------------
+def firewallSSHRest_sourceRestrictions():
+
+#--------------
+# Checks if firewall is rate limiting ssh
+#--------------
+def firewallSSHRest_rateLimiting():
+
+#--------------
+# Checks for limits on IPv6 for ssh
+#--------------
+def firewallSSHRest_ipv6Restrictions():
 
 #--------------
 # Firewall Checks - SSH Restrictions
+#   SSH Listening / firewall allowing
+#   Source Restrictions
+#   Rate Limiting
+#   IPv6 Restrictions
 #--------------
 def firewallSSHRestricted():
     logging.debug(f"\tWorking on [ Firewall : SSH Restrictions ]")
+
+    # Create final reporting distionary
+    fw_ssh_restrictions_dict = {}
+
+    # Call the functions
+    listening_dict = firewallSSHRest_listening()
+    sourceRest_dict = firewallSSHRest_sourceRestrictions()
+    rateLimit_dict = firewallSSHRest_rateLimiting()
+    ipv6Rest = firewallSSHRest_ipv6Restrictions()
+
+    ######
+    # Create final dictionary
+    ######
+    fw_ssh_restrictions_dict['listening'] = listening_dict 
+    fw_ssh_restrictions_dict['source_restrictions'] = sourceRest_dict 
+    fw_ssh_restrictions_dict['rate_limiting'] = rateLimit_dict 
+    fw_ssh_restrictions_dict['ipv6_restrictions'] = ipv6Rest 
 
 #--------------
 # Kernel Checks - Disable IP-Forwarding
@@ -826,7 +1390,7 @@ def checkFirewall():
     enabled_check = firewallEnabled()
     active_check = firewallActive()
     deny_check = firewallDenyDefault()
-    unnecessary_check = firewallUnnecessaryOpenPorts()
+    listening_ports_check = firewallListeningPorts()
     restricted_ssh_check = firewallSSHRestricted()
 
     #---
@@ -835,7 +1399,7 @@ def checkFirewall():
     firewall_checks_dict['firewall_enabled'] = enabled_check
     firewall_checks_dict['firewall_active'] = active_check
     firewall_checks_dict['deny_by_default'] = deny_check
-    firewall_checks_dict['exposed_ports'] = unnecessary_check
+    firewall_checks_dict['listening_ports'] = listening_ports_check
     firewall_checks_dict['restricted_ssh'] = restricted_ssh_check
 
     # Quick check
