@@ -1066,16 +1066,197 @@ def firewallSSHRest_listening():
 # Checks if ssh is restricted to specific IPs
 #--------------
 def firewallSSHRest_sourceRestrictions():
+    logging.debug(f"\t\tChecking Firewall SSH Restrictions [ Restricted Source ]")
+
+    #========
+    # Determine OS for check parameters
+    #========
+    # ufw
+    if OS_UD:
+        cmd_str = ["ufw", "status"]
+    # firewalld
+    elif OS_RC:
+        cmd_str = ["firewall-cmd", "--list-all"]
+
+    #========
+    # Search for port 22 / ssh rules
+    #========
+    ssh_source_expected = "Restricted SSH source rules"
+    ssh_source_actual = "Restricted SSH source rules"
+    ssh_source_status = "PASS"
+
+    try:
+        source_output = subprocess.check_output(cmd_str, text=True)
+
+        # Check the output for 22/ssh rules
+        source_output_lines = source_output.split('\n')
+
+        restricted_rules = []
+        unrestricted_rules = []
+
+        # Check for ssh rules in firewalls
+        for line in source_output_lines:
+            # Isolate checks to ssh lines
+            if '22' in line or 'ssh' in line or 'SSH' in line:
+                # Check if ssh rule has any limits
+                if 'ALLOW' in line or "accept" in line:
+                    if 'Anywhere' in line or '0.0.0.0/0' in line or '0.0.0.0' in line:
+                        unrestricted_rules.append(line)
+                    else:
+                        restricted_rules.append(line)
+
+        # See if any unrestricted rules exist
+        if len(unrestricted_rules) == 0:
+            # Update global
+            updateSummaryCounts(1, 0, 0, 1)
+        else:
+            # Update global
+            updateSummaryCounts(0, 1, 0, 1)
+            ssh_source_actual = "Unrestricted SSH source rules"
+            ssh_source_status = "FAIL"
+
+    except Exception as e:
+        logging.exception(f"Failed to determine if [ {firewall_service} ] is active [ {e} ]")
+        # Update global
+        updateSummaryCounts(0, 1, 0, 1)
+        ssh_source_actual = "Unrestricted SSH source rules"
+        ssh_source_status = "FAIL"
+
+    #========
+    # Create dictionary to return
+    #========
+    ssh_restricted_source_dict = {
+        "expected" : ssh_source_expected,
+        "actual" : ssh_source_actual,
+        "status" : ssh_source_status
+    }
+
+    return ssh_restricted_source_dict
 
 #--------------
 # Checks if firewall is rate limiting ssh
 #--------------
 def firewallSSHRest_rateLimiting():
+    logging.debug(f"\t\tChecking Firewall SSH Restrictions [ Rate Limiting ]")
+
+    #========
+    # Determine OS for check parameters
+    #========
+    # ufw
+    if OS_UD:
+        cmd_str = ["ufw", "status"]
+    # firewalld
+    elif OS_RC:
+        #cmd_str = ["firewall-cmd", "--list-all"]
+        cmd_str = ["firewall-cmd", "--list-rich-rules"]
+
+    #========
+    # Search for port 22 / ssh rules
+    #========
+    ssh_rate_expected = "SSH rate limited"
+    ssh_rate_actual = "SSH rate limited"
+    ssh_rate_status = "PASS"
+
+    try:
+        rate_output = subprocess.check_output(cmd_str, text=True)
+
+        # Check the output for 22/ssh rules
+        rate_output_lines = rate_output.split('\n')
+
+        # Check for ssh limits in firewall rules
+        for line in rate_output_lines:
+            # Isolate checks to ssh lines
+            if '22' in line or 'ssh' in line or 'SSH' in line:
+                # Check if ssh rule has any limits
+                if 'LIMIT' in line or "limit" in line:
+                    # Update global
+                    updateSummaryCounts(1, 0, 0, 1)
+                else:
+                    # Update global
+                    updateSummaryCounts(0, 1, 0, 1)
+                    ssh_rate_actual = "NO SSH rate limit"
+                    ssh_rate_status = "FAIL"
+
+    except Exception as e:
+        logging.exception(f"Failed to determine if [ {firewall_service} ] is active [ {e} ]")
+        # Update global
+        updateSummaryCounts(0, 1, 0, 1)
+        ssh_rate_actual = "NO SSH rate limit"
+        ssh_rate_status = "FAIL"
+
+    #========
+    # Create dictionary
+    #========
+    ssh_rate_limit_dict = {
+        "expected" : ssh_rate_expected,
+        "actual" : ssh_rate_actual,
+        "status" : ssh_rate_status
+    }
+
+    return ssh_rate_limit_dict 
 
 #--------------
 # Checks for limits on IPv6 for ssh
-#--------------
+#---i-----------
 def firewallSSHRest_ipv6Restrictions():
+    logging.debug(f"\t\tChecking Firewall SSH Restrictions [ IPv6 Restrictions ]")
+
+    #========
+    # Determine OS for check parameters
+    #========
+    # ufw
+    if OS_UD:
+        cmd_str = ["ufw", "status"]
+    # firewalld
+    elif OS_RC:
+        #cmd_str = ["firewall-cmd", "--list-all"]
+        cmd_str = ["firewall-cmd", "--list-rich-rules"]
+
+    #========
+    # Search for ssh / v6
+    #========
+    ssh_v6_expected = "SSH IPv6 Restrictions"
+    ssh_v6_actual = "SSH Restrictions limited"
+    ssh_v6_status = "PASS"
+
+    try:
+        v6_output = subprocess.check_output(cmd_str, text=True)
+
+        # Check the output for 22/ssh rules
+        v6_output_lines = v6_output.split('\n')
+
+        # Check for ssh limits in firewall rules
+        for line in v6_output_lines:
+            # Isolate checks to ssh lines
+            if '22' in line or 'ssh' in line or 'SSH' in line:
+                # Check if ssh rule has any limits
+                if 'ALLOW' in line or "accept" in line:
+                    if 'Anywhere' in line and 'v6' in line:
+                        # Update global
+                        updateSummaryCounts(0, 1, 0, 1)
+                        ssh_v6_actual = "NO SSH IPv6 Restrictions"
+                        ssh_v6_status = "FAIL"
+                    else:
+                        # Update global
+                        updateSummaryCounts(1, 0, 0, 1)
+
+    except Exception as e:
+        logging.exception(f"Failed to determine if [ {firewall_service} ] is active [ {e} ]")
+        # Update global
+        updateSummaryCounts(0, 1, 0, 1)
+        ssh_v6_actual = "NO SSH IPv6 Restrictions"
+        ssh_v6_status = "FAIL"
+
+    #========
+    # Create dictionary
+    #========
+    ssh_ipv6_dict = {
+        "expected" : ssh_v6_expected,
+        "actual" : ssh_v6_actual,
+        "status" : ssh_v6_status
+    }
+
+    return ssh_ipv6_dict
 
 #--------------
 # Firewall Checks - SSH Restrictions
@@ -1110,11 +1291,198 @@ def firewallSSHRestricted():
 def kernelDisableIPForward():
     logging.debug(f"\tWorking on [ Kernel : IP-Forwarding Disabled ]")
 
+    #========
+    # IPv4
+    #========
+    # Define cmd/search parameters
+    #   0 = disabled
+    #   1 = enabled
+    #========
+    ipv4_cmd_str = ['sysctl','net.ipv4.ip_forward']
+    ipv4_expected = "disabled"
+    ipv4_actual = "disabled"
+    ipv4_status = "PASS"
+
+    # Check for IPv4
+    try:
+        ipv4_output = subprocess.run(ipv4_cmd_str, text=True)
+        if ipv4_output.returncode == 0:
+            # Update global
+            updateSummaryCounts(1, 0, 0, 1)
+        elif ipv4_output.returncode == 1:
+            # Update global
+            updateSummaryCounts(0, 1, 0, 1)
+            ipv4_actual = "enabled"
+            ipv4_status = "FAIL"
+
+    except Exception as e:
+        logging.exception(f"Failed to determine if IPv4 Forwarding is disabled [ {e} ]")
+        # Update global
+        updateSummaryCounts(0, 1, 0, 1)
+        ipv4_actual = "Unable to determine"
+        ipv4_status = "FAIL"
+
+    # IPv4 Dict
+    ipv4_forward_dict = {
+        "expected" : ipv4_expected,
+        "actual" : ipv4_actual,
+        "status" : ipv4_status
+    }
+
+    #========
+    # IPv6
+    #========
+    # Define cmd/search parameters
+    #   0 = disabled
+    #   1 = enabled
+    #========
+    ipv6_cmd_str = ['sysctl','net.ipv6.conf.all.forwarding']
+    ipv6_expected = "disabled"
+    ipv6_actual = "disabled"
+    ipv6_status = "PASS"
+
+    # Check for IPv6
+    try:
+        ipv6_output = subprocess.run(ipv6_cmd_str, text=True)
+        if ipv6_output.returncode == 0:
+            # Update global
+            updateSummaryCounts(1, 0, 0, 1)
+        elif ipv6_output.returncode == 1:
+            # Update global
+            updateSummaryCounts(1, 0, 0, 1)
+            ipv6_actual = "enabled"
+            ipv6_status = "FAIL"
+    except Exception as ee:
+        logging.exception(f"Failed to determine if IPv6 Forwarding is disabled [ {ee} ]")
+        # Update global
+        updateSummaryCounts(0, 1, 0, 1)
+        ipv6_actual = "Unable to determine"
+        ipv6_status = "FAIL"
+
+    # IPv6 Dict
+    ipv6_forward_dict = {
+        "expected" : ipv6_expected,
+        "actual" : ipv6_actual,
+        "status" : ipv6_status
+    }
+
+    #========
+    # Create dictionary to return
+    #========
+    ip_forwarding_dict = {
+        "ipv4_forwarding" : ipv4_forward_dict,
+        "ipv6_forwarding" : ipv6_forward_dict
+    }
+    return ip_forwarding_dict 
+
 #--------------
 # Kernel Checks - Ignore ICMP Redirects
 #--------------
 def kernelDisableICMPRedirect():
     logging.debug(f"\tWorking on [ Kernel : ICMP Redirects Disabled]")
+
+    #========
+    # Search for 'accept_redirects' or 'send_redirects' or 'secure_redirects'
+    # Define cmd/search parameters
+    #   0 = disabled
+    #   1 = enabled
+    #========
+    # Accept Redirects
+    accept_cmd_str = ['sysctl','net.ipv4.conf.all.accept_redirects']
+    accept_expected = "disabled"
+    accept_actual = "disabled"
+    accept_status = "PASS"
+    try:
+        accept_output = subprocess.run(accept_cmd_str, text=True)
+        if accept_output.returncode == 0:
+            # Update global
+            updateSummaryCounts(1, 0, 0, 1)
+        elif accept_output.returncode == 1:
+            # Update global
+            updateSummaryCounts(0, 1, 0, 1)
+            accept_actual = "enabled"
+            accept_status = "FAIL"
+    except Exception as e:
+        logging.exception(f"Failed to determine if ICMP Redirects Disabled [ accept ] -- [ {e} ]")
+        # Update global
+        updateSummaryCounts(0, 1, 0, 1)
+        accept_actual = "Unable to determine"
+        accept_status = "FAIL"
+
+    accept_dict = {
+        "expected" : accept_expected,
+        "actual" : accept_actual,
+        "status" : accept_status
+    }
+
+    #========
+    # Send Redirects
+    #========
+    send_cmd_str = ['sysctl','net.ipv4.conf.all.send_redirects']
+    send_expected = "disabled"
+    send_actual = "disabled"
+    send_status = "PASS"
+    try:
+        send_output = subprocess.run(send_cmd_str, text=True)
+        if send_output.returncode == 0:
+            # Update global
+            updateSummaryCounts(1, 0, 0, 1)
+        elif send_output.returncode == 1:
+            # Update global
+            updateSummaryCounts(0, 1, 0, 1)
+            send_actual = "enabled"
+            send_status = "FAIL"
+    except Exception as ee:
+        logging.exception(f"Failed to determine if ICMP Redirects Disabled [ send ] -- [ {ee} ]")
+        # Update global
+        updateSummaryCounts(0, 1, 0, 1)
+        send_actual = "Unable to determine"
+        send_status = "FAIL"
+
+    send_dict = {
+        "expected" : send_expected,
+        "actual" : send_actual,
+        "status" : send_status
+    }
+
+    #========
+    # Secure Redirects
+    #========
+    secure_cmd_str = ['sysctl','net.ipv4.conf.all.secure_redirects']
+    secure_expected = "disabled"
+    secure_actual = "disabled"
+    secure_status = "disabled"
+    try:
+        secure_output = subprocess.run(secure_cmd_str, text=True)
+        if secure_output.returncode == 0:
+            # Update global
+            updateSummaryCounts(1, 0, 0, 1)
+        elif secure_output.returncode == 1:
+            # Update global
+            updateSummaryCounts(0, 1, 0, 1)
+            secure_actual = "enabled"
+            secure_status = "FAIL"
+    except Exception as eee:
+        logging.exception(f"Failed to determine if ICMP Redirects Disabled [ secure ] -- [ {eee} ]")
+        # Update global
+        updateSummaryCounts(0, 1, 0, 1)
+        secure_actual = "Unable to determine"
+        secure_status = "FAIL"
+
+    secure_dict = {
+        "expected" : secure_expected,
+        "actual" : secure_actual,
+        "status" : secure_status
+    }
+
+    #========
+    # Final Dictionary to return
+    #========
+    icmp_redirects_dict = {
+        "icmp_redirects_accept" : accept_dict,
+        "icmp_redirects_send" : send_dict,
+        "icmp_redirects_secure" : secure_dict,
+    }
 
 #--------------
 # Kernel Checks - Enable SYN Cookies
@@ -1122,11 +1490,85 @@ def kernelDisableICMPRedirect():
 def kernelEnableSYNCookies():
     logging.debug(f"\tWorking on [ Kernel : SYN Cookies Enabled]")
 
+    #========
+    # Define cmd parameters
+    #========
+    cmd_str = ['sysctl','net.ipv4.tcp_syncookies']
+
+    syn_expected = "disabled"
+    syn_actual = "disabled"
+    syn_status = "PASS"
+
+    #========
+    # Check setting
+    #========
+    try:
+        syn_output = subprocess.run(cmd_str, text=True)
+        if syn_output.returncode == 0:
+            # Update global
+            updateSummaryCounts(1, 0, 0, 1)
+        elif syn_output.returncode == 1:
+            # Update global
+            updateSummaryCounts(0, 1, 0, 1)
+            syn_actual = "enabled"
+            syn_status = "FAIL"
+    except Exception as e:
+        logging.exception(f"Failed to determine if SYN Cookes are enabled [ {e} ]")
+        # Update global
+        updateSummaryCounts(0, 1, 0, 1)
+        syn_actual = "Unable to determine"
+        syn_status = "FAIL"
+
+    syn_dict = {
+        "expected" : syn_expected,
+        "actual" : syn_actual,
+        "status" : syn_status
+    }
+
+    return syn_dict
+
 #--------------
 # Kernel Checks - Disable Source Routing
 #--------------
 def kernelDisableSourceRouting():
     logging.debug(f"\tWorking on [ Kernel : Source Routing Disabled ]")
+
+    #========
+    # Define cmd parameters
+    #========
+    cmd_str = ['sysctl','net.ipv4.conf.all.accept_source_route']
+
+    dis_source_expected = "disabled"
+    dis_source_actual = "disabled"
+    dis_source_status = "PASS"
+
+    #========
+    # Check setting
+    #========
+    try:
+        dis_source_output = subprocess.run(cmd_str, text=True)
+        if dis_source_output.returncode == 0:
+            # Update global
+            updateSummaryCounts(1, 0, 0, 1)
+        elif dis_source_output.returncode == 1:
+            # Update global
+            updateSummaryCounts(0, 1, 0, 1)
+            dis_source_actual = "enabled"
+            dis_source_status = "FAIL"
+    except Exception as e:
+        logging.exception(f"Failed to determine if Source Routing is  enabled [ {e} ]")
+        # Update global
+        updateSummaryCounts(0, 1, 0, 1)
+        dis_source_actual = "Unable to determine"
+        dis_source_status = "FAIL"
+
+    dis_source_dict = {
+        "expected" : dis_source_expected,
+        "actual" : dis_source_actual,
+        "status" : dis_source_status
+    }
+
+    return dis_source_dict
 
 #--------------
 # Service Checks - Unnecessary Services
