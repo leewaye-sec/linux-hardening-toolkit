@@ -724,10 +724,98 @@ def credentialLockout():
     
 
 #--------------
+# Check service status via systemctl status
+#--------------
+def serviceEnabledActiveChecker(service):
+
+    logging.debug(f"Service Check [ {service} ] : Enabled / Active")
+    
+    #=============
+    # Define variables
+    #=============
+    cmd_str = ['systemctl', 'status', service]
+
+    # Enabled Variables
+    enabled_expected = "enabled"
+    enabled_actual = "enabled"
+    enabled_status = "PASS"
+    
+    # Active Variables
+    active_expected = "active"
+    active_actual = "active"
+    active_status = "PASS"
+    
+    #=============
+    # Run Check
+    #=============
+    try:
+        service_output = subprocess.check_output(cmd_str, text=True)
+
+        # First check if the service is even found
+        if "could not be found" in service_output:
+            # Update global
+            updateSummaryCounts(0, 1, 0, 1)
+            enabled_actual = "disabled"
+            enabled_status = "FAIL"
+            active_actual = "disabled"
+            active_status = "FAIL"
+        else:
+            # Enabled Checks
+            if 'enabled' in service_output:
+                # Update global
+                updateSummaryCounts(1, 0, 0, 1)
+            else:
+                # Update global
+                updateSummaryCounts(0, 1, 0, 1)
+                enabled_actual = "disabled"
+                enabled_status = "FAIL"
+
+            # Active Checks
+            if 'active' in service_output:
+                # Update global
+                updateSummaryCounts(1, 0, 0, 1)
+            else:
+                # Update global
+                updateSummaryCounts(0, 1, 0, 1)
+                active_actual = "disabled"
+                active_status = "FAIL"
+
+    except Exception as e:
+        logging.exception(f"Failed to determine if [ {service} ] is enabled and active [ {e} ]")
+        # Update global
+        updateSummaryCounts(0, 1, 0, 1)
+        enabled_actual = "disabled"
+        enabled_status = "FAIL"
+        active_actual = "disabled"
+        active_status = "FAIL"
+
+    # Create dictionaries
+    service_dict = {
+        "service_enabled" : {
+            "expected" : enabled_expected,
+            "actual" : enabled_actual,
+            "status" : enabled_status
+        },
+        "service_active" : {
+            "expected" : enabled_expected,
+            "actual" : enabled_actual,
+            "status" : enabled_status
+        }
+    }
+
+    return service_dict
+
+
+#--------------
 # Logging Checks - rsyslog enabled / active
 #--------------
 def loggingRsyslogActive():
     logging.debug(f"\tWorking on [ Logging Checks : rsyslog status ]")
+
+    # Check if the service is enabled / active
+    rsyslog_dict = serviceEnabledActiveChecker(rsyslog)
+    return rsyslog_dict
+    
 
 #--------------
 # Logging Checks - auditd installed/running
@@ -735,17 +823,84 @@ def loggingRsyslogActive():
 def loggingAuditdActive():
     logging.debug(f"\tWorking on [ Logging Checks : auditd status ]")
 
+    # Check if the service is enabled / active
+    auditd_dict = serviceEnabledActiveChecker(auditd)
+    return auditd_dict
+
 #--------------
 # Logging Checks - journald persistent logging
 #--------------
 def loggingJournaldPersistence():
     logging.debug(f"\tWorking on [ Logging Checks : journald persistence ]")
 
+    # Check if the service is enabled / active
+    journald_dict = serviceEnabledActiveChecker(journald)
+    return journald_dict
+
 #--------------
 # Logging Checks - log rotation configured
 #--------------
 def loggingLogRotation():
     logging.debug(f"\tWorking on [ Logging Checks : log rotation ]")
+
+    #===========
+    # Check if the service is enabled / active
+    #===========
+    logrotate_ea_dict = serviceEnabledActiveChecker(logrotate.timer)
+
+    #===========
+    # Check for log rotation configuration
+    #===========
+    log_cmd_str = ['systemctl', 'list-timers', 'logrotate.timer']
+
+    config_expected = "Timers configured"
+    config_actual = "Timers configured"
+    config_status = "PASS"
+
+    # If the service is enabled and active, check for configuration
+    if logrotate_ea_dict['service_enabled']['status'] == "PASS" and logrotate_ea_dict['service_active']['status'] == "PASS":
+        # Check for timers
+        try:
+            logrot_output = subprocess.check_output(cmd_str, text=True)
+
+            # Determine if timers are present
+            if "0 timers listed." in logrot_output:
+                # Update global
+                updateSummaryCounts(0, 1, 0, 1)
+                config_actual = "0 timers configured"
+                config_status = "FAIL"
+            else:
+                # Update global
+                updateSummaryCounts(1, 0, 0, 1)
+
+        except Exception as e:
+            logging.exception(f"Failed to determine if [ logrotate.timer ] is configured [ {e} ]")
+            # Update global
+            updateSummaryCounts(0, 1, 0, 1)
+            config_actual = "0 timers configured"
+            config_status = "FAIL"
+    else:
+        config_actual = "Timers configured"
+        config_status = "PASS"
+
+    # Create config dict
+    log_config_dict = {
+        "expected" : config_expected,
+        "actual" : config_actual,
+        "status" : config_status
+    }
+
+    #===========
+    # Create final dict 
+    #===========
+    logrotate_dict = {
+        "service" : 'logrotate.service',
+        "enabled" : logrotate_ea_dict['service_enabled'],
+        "active" : logrotate_ea_dict['service_active'],
+        "configured" : log_config_dict
+    }
+
+    return logrotate_dict
 
 #--------------
 # Firewall Checks - UFW / Firewalld Enabled
@@ -1197,7 +1352,7 @@ def firewallSSHRest_rateLimiting():
 
 #--------------
 # Checks for limits on IPv6 for ssh
-#---i-----------
+#--------------
 def firewallSSHRest_ipv6Restrictions():
     logging.debug(f"\t\tChecking Firewall SSH Restrictions [ IPv6 Restrictions ]")
 
@@ -1451,7 +1606,7 @@ def kernelDisableICMPRedirect():
     secure_cmd_str = ['sysctl','net.ipv4.conf.all.secure_redirects']
     secure_expected = "disabled"
     secure_actual = "disabled"
-    secure_status = "disabled"
+    secure_status = "PASS"
     try:
         secure_output = subprocess.run(secure_cmd_str, text=True)
         if secure_output.returncode == 0:
@@ -1481,7 +1636,7 @@ def kernelDisableICMPRedirect():
     icmp_redirects_dict = {
         "icmp_redirects_accept" : accept_dict,
         "icmp_redirects_send" : send_dict,
-        "icmp_redirects_secure" : secure_dict,
+        "icmp_redirects_secure" : secure_dict
     }
 
 #--------------
@@ -1594,11 +1749,180 @@ def loggingLegacyProtocols():
 def permissionsWorldWritableFiles():
     logging.debug(f"\tWorking on [ Permissions : Legacy Protocols ]")
 
+    #==============
+    # Define parameters
+    #==============
+    path = "/"
+    cmd_str = ['find', path, '-perm', '-o+w', '-type', 'f']
+
+    ww_perm_expected = "No world-writable files present"
+    ww_perm_actual = "No world-writable files present"
+    ww_perm_status = "PASS"
+
+    #==============
+    # Check for world writable  
+    #==============
+    try:
+        ww_cmd_output = subprocess.run(cmd_str, capture_output=True, text=True)
+        ww_cmd_lines = ww_cmd_output.stdout.split('\n')
+
+        # Check for the number of world-writable files
+        if len(ww_cmd_lines) < 1:
+            # Update global
+            updateSummaryCounts(1, 0, 0, 1)
+        else:
+            # Update global
+            updateSummaryCounts(0, 1, 0, 1)
+            ww_perm_actual = f"{len(ww_cmd_lines)} world-writable files present"
+            ww_perm_status = "FAIL"
+
+    except Exception as e:
+        logging.exception(f"Failed to determine presence of world writable files [ {e} ]")
+        ww_perm_actual = "Unable to check for world-writable files"
+        ww_perm_status = "FAIL"
+
+    ww_perm_dict = {
+        "expected" : ww_perm_expected,
+        "actual" : ww_perm_actual,
+        "status" : ww_perm_status
+    }
+    
+    return ww_perm_dict
+
+#--------------
+# Retrieve permissions for passed file
+#--------------
+def permissionsRetriever(path):
+
+    permissions_to_return = None
+
+    # Determine permissions
+    try:
+        # Determine mode
+        mode = os.stat(path).st_mode
+    
+        # Convert to octal
+        permissions_to_return = oct(mode)[-3:]
+
+    except FileNotFoundError:
+        logging.exception(f"Exception: File was not found [ {path} ]")
+    except Exception as e:
+        logging.exception(f"Exception: Unable to determine permissions [ {e} ]")
+
+    return permissions_to_return 
+
 #--------------
 # Permissions Checks - Improper SSH Key Permission
 #--------------
 def permissionsImproperSSHKeyPermissions():
     logging.debug(f"\tWorking on [ Permissions : Legacy Protocols ]")
+
+    ssh_perm_dict = {}
+    
+    #================
+    # Gather actual permissions
+    #================
+    # '~/.ssh' : 700
+    ssh_dir_perms_expected = '700'
+    ssh_dir_perms_actual = permissionsRetriever('~/.ssh')
+    ssh_dir_perms_status = "PASS" if ssh_dir_perms_expected == ssh_dir_perms_actual else "FAIL"
+
+    ssh_dir_perms_dict = { 
+        'expected' : ssh_dir_perms_expected,
+        'actual' : ssh_dir_perms_actual,
+        'status' : ssh_dir_perms_status
+    }
+
+    if ssh_dir_perms_status == "PASS":
+        # Update global
+        updateSummaryCounts(1, 0, 0, 1)
+    else:
+        # Update global
+        updateSummaryCounts(0, 1, 0, 1)
+
+    # '~/.ssh/id_rsa' : 600
+    id_rsa_perms_expected = '600'
+    id_rsa_perms_actual = permissionsRetriever('~/.ssh/id_rsa')
+    id_rsa_perms_status = "PASS" if id_rsa_perms_expected == id_rsa_perms_actual else "FAIL" 
+
+    id_rsa_perms_dict = {
+        'expected' : id_rsa_perms_expected,
+        'actual' : id_rsa_perms_actual,
+        'status' : id_rsa_perms_status
+    }
+
+    if id_rsa_perms_status == "PASS":
+        # Update global
+        updateSummaryCounts(1, 0, 0, 1)
+    else:
+        # Update global
+        updateSummaryCounts(0, 1, 0, 1)
+
+    # '~/.ssh/id_rsa.pub' : 644
+    id_rsa_pub_perms_expected = '644'
+    id_rsa_pub_perms_actual = permissionsRetriever('~/.ssh/id_rsa.pub')
+    id_rsa_pub_perms_status = "PASS" if id_rsa_pub_perms_expected == id_rsa_pub_perms_actual else "FAIL" 
+
+    id_rsa_pub_perms_dict = {
+        'expected' : id_rsa_pub_perms_expected,
+        'actual' : id_rsa_pub_perms_actual,
+        'status' : id_rsa_pub_perms_status
+    }
+
+    if id_rsa_pub_perms_status == "PASS":
+        # Update global
+        updateSummaryCounts(1, 0, 0, 1)
+    else:
+        # Update global
+        updateSummaryCounts(0, 1, 0, 1)
+
+    # '~/.ssh/authorized_keys' : 600
+    auth_keys_perms_expected = '600'
+    auth_keys_perms_actual = permissionsRetriever('~/.ssh/authorized_keys')
+    auth_keys_perms_status = "PASS" if auth_keys_perms_expected == auth_keys_perms_actual else "FAIL" 
+
+    auth_keys_perms_dict = {
+        'expected' : auth_keys_perms_expected,
+        'actual' : auth_keys_perms_actual,
+        'status' : auth_keys_perms_status
+    }
+
+    if auth_keys_perms_status == "PASS":
+        # Update global
+        updateSummaryCounts(1, 0, 0, 1)
+    else:
+        # Update global
+        updateSummaryCounts(0, 1, 0, 1)
+
+    # '~/.ssh/config' : 600
+    ssh_config_perms_expected = '600'
+    ssh_config_perms_actual = permissionsRetriever('~/.ssh/config')
+    ssh_config_perms_status = "PASS" if ssh_config_perms_expected == ssh_config_perms_actual else "FAIL" 
+
+    ssh_config_perms_dict = {
+        'expected' : ssh_config_perms_expected,
+        'actual' : ssh_config_perms_actual,
+        'status' : ssh_config_perms_status
+    }
+
+    if ssh_config_perms_status == "PASS":
+        # Update global
+        updateSummaryCounts(1, 0, 0, 1)
+    else:
+        # Update global
+        updateSummaryCounts(0, 1, 0, 1)
+
+
+    #================
+    # Update final dictionary 
+    #================
+    ssh_perm_dict['~/.ssh'] = ssh_dir_perms_dict 
+    ssh_perm_dict['~/.ssh/id_rsa'] = id_rsa_perms_dict 
+    ssh_perm_dict['~/.ssh/id_rsa.pub'] = id_rsa_pub_perms_dict 
+    ssh_perm_dict['~/.ssh/authorized_keys'] = auth_keys_perms_dict 
+    ssh_perm_dict['~/.ssh/config'] = ssh_config_perms_dict 
+
+    return ssh_perm_dict
 
 #--------------
 # Permissions Checks - SUID / SGID Binaries
@@ -1606,50 +1930,215 @@ def permissionsImproperSSHKeyPermissions():
 def permissionsSUIDSGIDBinaries():
     logging.debug(f"\tWorking on [ Permissions : SUID / SGID Binaries]")
 
+    # SUID : find / -type f -perm /4000
+    # SGID : find / -type f -perm /2000
+    base_path = '/'
+
+    #==============
+    # Check for suid files
+    #==============
+    suid_cmd = ['find', base_path, '-type', 'f', '-perm', '/4000'
+    suid_expected = "No SUID files present"
+    suid_actual = "No SUID files present"
+    suid_status = "PASS"
+    try:
+        suid_cmd_output = subprocess.run(suid_cmd, capture_output=True, text=True)
+        suid_cmd_lines = suid_cmd_output.stdout.split('\n')
+
+        # Check for the number of world-writable files
+        if len(suid_cmd_lines) < 1:
+            # Update global
+            updateSummaryCounts(1, 0, 0, 1)
+        else:
+            # Update global
+            updateSummaryCounts(0, 1, 0, 1)
+            suid_actual = f"{len(suid_lines)} SUID files present"
+            suid_status = "FAIL"
+
+    except Exception as e:
+        logging.exception(f"Failed to determine presence of SUID files [ {e} ]")
+        suid_actual = "Unable to check for SUID files"
+        suid_status = "FAIL"
+
+    suid_dicts = {
+        "expected" : suid_expected,
+        "actual" : suid_actual,
+        "status" : suid_status
+    }
+
+    #==============
+    # Check for sgid files
+    #==============
+    sgid_cmd = ['find', base_path, '-type', 'f', '-perm', '/2000'
+    sgid_expected = "No SGID files present"
+    sgid_actual = "No SGID files present"
+    sgid_status = "PASS"
+    try:
+        sgid_cmd_output = subprocess.run(sgid_cmd, capture_output=True, text=True)
+        sgid_cmd_lines = sgid_cmd_output.stdout.split('\n')
+
+        # Check for the number of world-writable files
+        if len(sgid_cmd_lines) < 1:
+            # Update global
+            updateSummaryCounts(1, 0, 0, 1)
+        else:
+            # Update global
+            updateSummaryCounts(0, 1, 0, 1)
+            sgid_actual = f"{len(sgid_lines)} SUID files present"
+            sgid_status = "FAIL"
+
+    except Exception as ee:
+        logging.exception(f"Failed to determine presence of SGID files [ {ee} ]")
+        # Update global
+        updateSummaryCounts(0, 1, 0, 1)
+        sgid_actual = "Unable to check for SGID files"
+        sgid_status = "FAIL"
+
+    sgid_dicts = {
+        "expected" : sgid_expected,
+        "actual" : sgid_actual,
+        "status" : sgid_status
+    }
+
+    #==============
+    # Create final dict to return
+    #==============
+    suid_sgid_dict = {
+        "suid_files" : suid_dicts,
+        "sgid_files" : sgid_dicts,
+    }
+
+    return suid_sgid_dict 
+
 #--------------
 # Permissions Checks - Sensitive File Ownership
+#   /etc/passwd
+#   /etc/shadow
+#   /etc/sudoers
 #--------------
 def permissionsSensitiveFileOwnership():
     logging.debug(f"\tWorking on [ Permissions : Sensitive File Ownership ]")
 
+    sensitive_files_dict = {}
+
+    #==============
+    # /etc/passwd
+    #==============
+    passwd_perms_expected = '644'
+    passwd_perms_actual = permissionsRetriever('/etc/passwd')
+    passwd_perms_status = "PASS" if passwd_perms_expected == passwd_perms_actual else "FAIL"
+
+    passwd_perms_dict = { 
+        'expected' : passwd_perms_expected,
+        'actual' : passwd_perms_actual,
+        'status' : passwd_perms_status
+    }
+
+    if passwd_perms_status == "PASS":
+        # Update global
+        updateSummaryCounts(1, 0, 0, 1)
+    else:
+        # Update global
+        updateSummaryCounts(0, 1, 0, 1)
+
+    #==============
+    # /etc/shadow
+    #==============
+    shadow_perms_expected = '600'
+    shadow_perms_actual = permissionsRetriever('/etc/shadow')
+    shadow_perms_status = "PASS" if shadow_perms_expected == shadow_perms_actual else "FAIL"
+
+    shadow_perms_dict = { 
+        'expected' : shadow_perms_expected,
+        'actual' : shadow_perms_actual,
+        'status' : shadow_perms_status
+    }
+
+    if shadow_perms_status == "PASS":
+        # Update global
+        updateSummaryCounts(1, 0, 0, 1)
+    else:
+        # Update global
+        updateSummaryCounts(0, 1, 0, 1)
+
+    #==============
+    # /etc/sudoers
+    #==============
+    sudoers_perms_expected = '440'
+    sudoers_perms_actual = permissionsRetriever('/etc/passwd')
+    sudoers_perms_status = "PASS" if sudoers_perms_expected == sudoers_perms_actual else "FAIL"
+
+    sudoers_perms_dict = { 
+        'expected' : sudoers_perms_expected,
+        'actual' : sudoers_perms_actual,
+        'status' : sudoers_perms_status
+    }
+
+    if sudoers_perms_status == "PASS":
+        # Update global
+        updateSummaryCounts(1, 0, 0, 1)
+    else:
+        # Update global
+        updateSummaryCounts(0, 1, 0, 1)
+
+    #==============
+    # Create / return dict
+    #==============
+    sensitive_files_dict['/etc/passwd'] = passwd_perm_dict
+    sensitive_files_dict['/etc/shadow'] = shadow_perm_dict
+    sensitive_files_dict['/etc/sudoers'] = sudoers_perm_dict
+
+    return sensitive_files_dict
+
 #--------------
 # Remote / SSH Checks - root login disabled
+#   Search for 'PermitRootLogin' - uncommented
 #--------------
 def remoteRootLoginDisabled(config_str):
     logging.debug(f"\tWorking on [ Remote : Root Loging Disabled ]")
 
 #--------------
 # Remote / SSH Checks - password authentication disabled
+#   Search for 'PasswordAuthentication '
+#       If yes, then it is enabled - if commented out, then it is enabled
 #--------------
 def remotePasswordAuthDisabled():
     logging.debug(f"\tWorking on [ Remote : Password Authentication Disabled ]")
 
 #--------------
 # Remote / SSH Checks - ssh protocol version
+#   Run 'ssh -V'
 #--------------
 def remoteProtocolVersion():
     logging.debug(f"\tWorking on [ Remote : SSH Protocol Version]")
 
 #--------------
 # Remote / SSH Checks - empty passwords disabled
+#   Search for 'PermitEmptyPasswords'
+#       If yes = enabled - if commented out = enabled
 #--------------
 def remoteEmptyPasswordsDisabled():
     logging.debug(f"\tWorking on [ Remote : Empty Password Disabled ]")
 
 #--------------
 # Remote / SSH Checks - max authorization attempts
+#   Search for 'MaxAuthTries'
 #--------------
 def remoteMaxAuthAttempts():
     logging.debug(f"\tWorking on [ Remote : Max Authorization Attempts Configured ]")
 
 #--------------
 # Remote / SSH Checks - idle timeout configured
+#   Search for 'ClientAliveInterval' and maybe 'ClientAlivecountMax'
+#   If commented out = disabled
 #--------------
 def remoteIdleTimeoutConfigured():
     logging.debug(f"\tWorking on [ Remote : Idle Timeout Configured ]")
 
 #--------------
 # Remote / SSH Checks - Strong Cipher
+#   List ciphers => ssh -Q cipher
+#   List MACs => ssh -Q mac
 #--------------
 def remoteStrongCipher():
     logging.debug(f"\tWorking on [ Remote : Cipher Checks ]")
@@ -1801,9 +2290,9 @@ def checkLogging():
     #---
     # Update dictionary
     #---
-    logging_checks_dict['rsyslog_active'] = rs_checks
-    logging_checks_dict['auditd_active'] = auditd_checks
-    logging_checks_dict['journald_persistence'] = journald_persistence
+    logging_checks_dict['rsyslog_audit'] = rs_checks
+    logging_checks_dict['auditd_audit'] = auditd_checks
+    logging_checks_dict['journald_audit'] = journald_persistence
     logging_checks_dict['log_rotation'] = log_rotation_config
 
     # Quick check
