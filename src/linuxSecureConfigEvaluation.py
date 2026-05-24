@@ -2092,18 +2092,131 @@ def permissionsSensitiveFileOwnership():
 
 #--------------
 # Remote / SSH Checks - root login disabled
-#   Search for 'PermitRootLogin' - uncommented
+#   Search for 'PermitRootLogin' - commented = disabled
 #--------------
 def remoteRootLoginDisabled(config_str):
     logging.debug(f"\tWorking on [ Remote : Root Loging Disabled ]")
 
+    #------------------
+    # Define paths / strings / variables
+    #------------------
+    sshd_path = "/etc/ssh/sshd_config"
+    search_rootlogin = "^#?PermitRootLogin"
+    search_cmd = ['grep', '-E', search_rootlogin, sshd_path]
+
+    # Define output variables
+    root_log_enabled_expected = "disabled"
+    root_log_enabled_actual = "disabled"
+    root_log_enabled_status = "PASS"
+
+    #------------------
+    # Search for the string
+    #------------------
+    try:
+        rootlogin_output = subprocess.run(search_cmd, capture_output=True, text=True)
+        rootlogin_output_split = rootlogin_output.stdout.strip().split('\n')
+
+        # Make sure only one thing was returned
+        if len(rootlogin_output_split) > 1:
+            updateSummaryCounts(0, 1, 0, 1)
+            root_log_enabled_actual = "Unabled to determine status"
+            root_log_enabled_status = "FAIL"
+
+        elif len(rootlogin_output_split) == 1:
+            # Check if the string started with '#'
+            if rootlogin_output_split[0].startswith('#'):
+                updateSummaryCounts(1, 0, 0, 1)
+            else:
+                updateSummaryCounts(0, 1, 0, 1)
+                root_log_enabled_actual = "enabled"
+                root_log_enabled_status = "FAIL"
+        else:
+            updateSummaryCounts(0, 1, 0, 1)
+            root_log_enabled_actual = "Unabled to determine status"
+            root_log_enabled_status = "FAIL"
+
+    except Exception as e:
+        logging.exception(f"Unexpected error while searching sshd_config file [ {e} ]")
+
+    #------------------
+    # Create final dictionary for return
+    #------------------
+    root_log_dis_dict = {
+        "expected" : root_log_enabled_expected,
+        "actual" : root_log_enabled_actual,
+        "status" : root_log_enabled_status
+    }
+
+    return root_log_dis_dict 
+
 #--------------
 # Remote / SSH Checks - password authentication disabled
-#   Search for 'PasswordAuthentication '
+#   Search for 'PasswordAuthentication'
 #       If yes, then it is enabled - if commented out, then it is enabled
 #--------------
 def remotePasswordAuthDisabled():
     logging.debug(f"\tWorking on [ Remote : Password Authentication Disabled ]")
+
+    #------------------
+    # Define paths / strings / variables
+    #------------------
+    sshd_path = "/etc/ssh/sshd_config"
+    search_passauth = "^#?PasswordAuthentication"
+    search_cmd = ['grep', '-E', search_passauth, sshd_path]
+
+    # Define output variables
+    pass_auth_enabled_expected = "disabled"
+    pass_auth_enabled_actual = "disabled"
+    pass_auth_enabled_status = "PASS"
+
+    #------------------
+    # Search for the string
+    #------------------
+    try:
+        passauth_output = subprocess.run(search_cmd, capture_output=True, text=True)
+        passauth_output_split = passauth_output.stdout.strip().split('\n')
+
+        # Make sure only one thing was returned
+        if len(passauth_output_split) > 1:
+            updateSummaryCounts(0, 1, 0, 1)
+            pass_auth_enabled_actual = "Unabled to determine status"
+            pass_auth_enabled_status = "FAIL"
+
+        elif len(passauth_output_split) == 1:
+            # Check if the string started with '#' -- disabled
+            if passauth_output_split[0].startswith('#'):
+                updateSummaryCounts(1, 0, 0, 1)
+
+            # The line is not commented out
+            else:
+                # Enabled
+                if "yes" in passauth_output_split[0]:
+                    updateSummaryCounts(0, 1, 0, 1)
+                    pass_auth_enabled_actual = "enabled"
+                    pass_auth_enabled_status = "FAIL"
+
+                # Disabled
+                elif "no" in passauth_output_split[0]:
+                    updateSummaryCounts(1, 0, 0, 1)
+
+        else:
+            updateSummaryCounts(0, 1, 0, 1)
+            pass_auth_enabled_actual = "Unabled to determine status"
+            pass_auth_enabled_status = "FAIL"
+
+    except Exception as e:
+        logging.exception(f"Unexpected error while searching sshd_config file [ {e} ]")
+
+    #------------------
+    # Create final dictionary for return
+    #------------------
+    pass_auth_dis_dict = {
+        "expected" : pass_auth_enabled_expected,
+        "actual" : pass_auth_enabled_actual,
+        "status" : pass_auth_enabled_status
+    }
+
+    return pass_auth_dis_dict
 
 #--------------
 # Remote / SSH Checks - ssh protocol version
@@ -2112,13 +2225,101 @@ def remotePasswordAuthDisabled():
 def remoteProtocolVersion():
     logging.debug(f"\tWorking on [ Remote : SSH Protocol Version]")
 
+    version_cmd = ['ssh', '-V'], capture_output=True, text=True)
+
+    # Define output variables
+    ssh_version = "Unknown"
+    ssh_version_status = "FAIL"
+
+    #------------------
+    # Search for the string
+    #------------------
+    try:
+        version_output = subprocess.run(version_cmd, capture_output=True, text=True)
+        ssh_version = version_output.stdout.strip()
+        ssh_version_status = "PASS"
+    except Exception as e:
+        logging.exception(f"Unexpected error while determining ssh version [ {e} ]")
+
+    #------------------
+    # Create final dictionary for return
+    #------------------
+    ssh_version_dict = {
+        "version" : ssh_version,
+        "status" : ssh_version_status
+    }
+
+    return ssh_version_dict
+
 #--------------
 # Remote / SSH Checks - empty passwords disabled
 #   Search for 'PermitEmptyPasswords'
-#       If yes = enabled - if commented out = enabled
+#       If yes = enabled ||| if commented out = disabled || if uncommented and no = disabled
 #--------------
 def remoteEmptyPasswordsDisabled():
     logging.debug(f"\tWorking on [ Remote : Empty Password Disabled ]")
+
+    #------------------
+    # Define paths / strings / variables
+    #------------------
+    sshd_path = "/etc/ssh/sshd_config"
+    search_empty_pass = "^#?PermitEmptyPasswords"
+    search_cmd = ['grep', '-E', search_empty_pass, sshd_path]
+
+    # Define output variables
+    empty_pass_enabled_expected = "disabled"
+    empty_pass_enabled_actual = "disabled"
+    empty_pass_enabled_status = "PASS"
+
+    #------------------
+    # Search for the string
+    #------------------
+    try:
+        emptypass_output = subprocess.run(search_cmd, capture_output=True, text=True)
+        emptypass_output_split = emptypass_output.stdout.strip().split('\n')
+
+        # Make sure only one thing was returned
+        if len(emptypass_output_split) > 1:
+            updateSummaryCounts(0, 1, 0, 1)
+            pass_auth_enabled_actual = "Unabled to determine status"
+            pass_auth_enabled_status = "FAIL"
+
+        elif len(emptypass_output_split) == 1:
+            # Check if the string started with '#' -- disabled
+            if emptypass_output[0].startswith('#'):
+                updateSummaryCounts(1, 0, 0, 1)
+
+            # The line is not commented out
+            else:
+                # Enabled
+                if "yes" in emptypass_output_split[0]:
+                    updateSummaryCounts(0, 1, 0, 1)
+                    empty_pass_enabled_actual = "enabled"
+                    empty_pass_enabled_status = "FAIL"
+
+                # Disabled
+                elif "no" in emptypass_output_split[0]:
+                    updateSummaryCounts(1, 0, 0, 1)
+
+        else:
+            updateSummaryCounts(0, 1, 0, 1)
+            empty_pass_enabled_actual = "Unabled to determine status"
+            empty_pass_enabled_status = "FAIL"
+
+    except Exception as e:
+        logging.exception(f"Unexpected error while searching sshd_config file [ {e} ]")
+
+    #------------------
+    # Create final dictionary for return
+    #------------------
+    empty_pass_dict = {
+        "expected" : empty_pass_enabled_expected,
+        "actual" : empty_pass_enabled_actual,
+        "status" : empty_pass_enabled_status
+    }
+
+    return empty_pass_dict
+
 
 #--------------
 # Remote / SSH Checks - max authorization attempts
@@ -2126,6 +2327,75 @@ def remoteEmptyPasswordsDisabled():
 #--------------
 def remoteMaxAuthAttempts():
     logging.debug(f"\tWorking on [ Remote : Max Authorization Attempts Configured ]")
+
+    #------------------
+    # Define paths / strings / variables
+    #------------------
+    sshd_path = "/etc/ssh/sshd_config"
+    search_max_auth = "^#?MaxAuthTries"
+    search_cmd = ['grep', '-E', search_max_auth, sshd_path]
+
+    # Define output variables
+    max_auth_enabled_expected = "<=4"
+    max_auth_enabled_actual = "3"
+    max_auth_enabled_status = "PASS"
+
+    #------------------
+    # Search for the string
+    #------------------
+    try:
+        maxauth_output = subprocess.run(search_cmd, capture_output=True, text=True)
+        maxauth_output_split = maxauth_output.stdout.strip().split('\n')
+
+        # Make sure only one thing was returned
+        if len(maxauth_output_split) > 1:
+            updateSummaryCounts(0, 1, 0, 1)
+            max_auth_enabled_actual = "Unabled to determine status"
+            max_auth_enabled_status = "FAIL"
+
+        elif len(maxauth_output_split) == 1:
+
+            # Check if the string started with '#' -- disabled (so default = 6)
+            if maxauth_output[0].startswith('#'):
+                updateSummaryCounts(0, 1, 0, 1)
+                max_auth_enabled_actual = "6"
+                max_auth_enabled_status = "FAIL"
+
+            # The line is not commented out - isolate the number
+            else:
+                max_auth_config = int(maxauth_output_split[0].replace("MaxAuthTries","").strip())
+
+                # Configured securely 
+                if max_auth_config <= 4 :
+                    updateSummaryCounts(1, 0, 0, 1)
+                    max_auth_enabled_actual = max_auth_config
+                    max_auth_enabled_status = "PASS"
+
+                # Configured insecurely 
+                else:
+                    updateSummaryCounts(0, 1, 0, 1)
+                    max_auth_enabled_actual = max_auth_config
+                    max_auth_enabled_status = "FAIL"
+
+        else:
+            updateSummaryCounts(0, 1, 0, 1)
+            max_auth_enabled_actual = "Unabled to determine status"
+            max_auth_enabled_status = "FAIL"
+
+    except Exception as e:
+        logging.exception(f"Unexpected error while searching sshd_config file [ {e} ]")
+
+    #------------------
+    # Create final dictionary for return
+    #------------------
+    max_auth_dict = {
+        "expected" : max_auth_enabled_expected,
+        "actual" : max_auth_enabled_actual,
+        "status" : max_auth_enabled_status
+    }
+
+    return max_auth_dict
+
 
 #--------------
 # Remote / SSH Checks - idle timeout configured
@@ -2422,6 +2692,7 @@ def checkRemote():
     # Create dictionary
     remote_ssh_checks_dict = {}
 
+    '''
     # Will check /etc/ssh/sshd_config
     ssh_config_file_path = "/etc/ssh/sshd_config"
     ssh_config = ingestFileToString(ssh_config_file_path)
@@ -2430,6 +2701,7 @@ def checkRemote():
     if ssh_config is None:
         logging.error(f"Failed to ingest ssh configuration [ {ssh_config_file_path} ]")
         return remote_ssh_checks_dict 
+    '''
 
     #---
     # Run the checks
