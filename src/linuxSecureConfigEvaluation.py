@@ -2114,21 +2114,26 @@ def remoteRootLoginDisabled(config_str):
     #------------------
     try:
         rootlogin_output = subprocess.run(search_cmd, capture_output=True, text=True)
-        rootlogin_output_split = rootlogin_output.stdout.strip().split('\n')
+        if rootlogin_output.returncode == 0:
+            rootlogin_output_split = rootlogin_output.stdout.strip().split('\n')
 
-        # Make sure only one thing was returned
-        if len(rootlogin_output_split) > 1:
-            updateSummaryCounts(0, 1, 0, 1)
-            root_log_enabled_actual = "Unabled to determine status"
-            root_log_enabled_status = "FAIL"
+            # Make sure only one thing was returned
+            if len(rootlogin_output_split) > 1:
+                updateSummaryCounts(0, 1, 0, 1)
+                root_log_enabled_actual = "Unabled to determine status"
+                root_log_enabled_status = "FAIL"
 
-        elif len(rootlogin_output_split) == 1:
-            # Check if the string started with '#'
-            if rootlogin_output_split[0].startswith('#'):
-                updateSummaryCounts(1, 0, 0, 1)
+            elif len(rootlogin_output_split) == 1:
+                # Check if the string started with '#'
+                if rootlogin_output_split[0].startswith('#'):
+                    updateSummaryCounts(1, 0, 0, 1)
+                else:
+                    updateSummaryCounts(0, 1, 0, 1)
+                    root_log_enabled_actual = "enabled"
+                    root_log_enabled_status = "FAIL"
             else:
                 updateSummaryCounts(0, 1, 0, 1)
-                root_log_enabled_actual = "enabled"
+                root_log_enabled_actual = "Unabled to determine status"
                 root_log_enabled_status = "FAIL"
         else:
             updateSummaryCounts(0, 1, 0, 1)
@@ -2174,31 +2179,36 @@ def remotePasswordAuthDisabled():
     #------------------
     try:
         passauth_output = subprocess.run(search_cmd, capture_output=True, text=True)
-        passauth_output_split = passauth_output.stdout.strip().split('\n')
+        if passauth_output.returncode == 0:
+            passauth_output_split = passauth_output.stdout.strip().split('\n')
 
-        # Make sure only one thing was returned
-        if len(passauth_output_split) > 1:
-            updateSummaryCounts(0, 1, 0, 1)
-            pass_auth_enabled_actual = "Unabled to determine status"
-            pass_auth_enabled_status = "FAIL"
+            # Make sure only one thing was returned
+            if len(passauth_output_split) > 1:
+                updateSummaryCounts(0, 1, 0, 1)
+                pass_auth_enabled_actual = "Unabled to determine status"
+                pass_auth_enabled_status = "FAIL"
 
-        elif len(passauth_output_split) == 1:
-            # Check if the string started with '#' -- disabled
-            if passauth_output_split[0].startswith('#'):
-                updateSummaryCounts(1, 0, 0, 1)
-
-            # The line is not commented out
-            else:
-                # Enabled
-                if "yes" in passauth_output_split[0]:
-                    updateSummaryCounts(0, 1, 0, 1)
-                    pass_auth_enabled_actual = "enabled"
-                    pass_auth_enabled_status = "FAIL"
-
-                # Disabled
-                elif "no" in passauth_output_split[0]:
+            elif len(passauth_output_split) == 1:
+                # Check if the string started with '#' -- disabled
+                if passauth_output_split[0].startswith('#'):
                     updateSummaryCounts(1, 0, 0, 1)
 
+                # The line is not commented out
+                else:
+                    # Enabled
+                    if "yes" in passauth_output_split[0]:
+                        updateSummaryCounts(0, 1, 0, 1)
+                        pass_auth_enabled_actual = "enabled"
+                        pass_auth_enabled_status = "FAIL"
+
+                    # Disabled
+                    elif "no" in passauth_output_split[0]:
+                        updateSummaryCounts(1, 0, 0, 1)
+
+            else:
+                updateSummaryCounts(0, 1, 0, 1)
+                pass_auth_enabled_actual = "Unabled to determine status"
+                pass_auth_enabled_status = "FAIL"
         else:
             updateSummaryCounts(0, 1, 0, 1)
             pass_auth_enabled_actual = "Unabled to determine status"
@@ -2225,7 +2235,7 @@ def remotePasswordAuthDisabled():
 def remoteProtocolVersion():
     logging.debug(f"\tWorking on [ Remote : SSH Protocol Version]")
 
-    version_cmd = ['ssh', '-V'], capture_output=True, text=True)
+    version_cmd = ['ssh', '-V']
 
     # Define output variables
     ssh_version = "Unknown"
@@ -2276,31 +2286,36 @@ def remoteEmptyPasswordsDisabled():
     #------------------
     try:
         emptypass_output = subprocess.run(search_cmd, capture_output=True, text=True)
-        emptypass_output_split = emptypass_output.stdout.strip().split('\n')
+        if emptypass_output.returncode == 0:
+            emptypass_output_split = emptypass_output.stdout.strip().split('\n')
 
-        # Make sure only one thing was returned
-        if len(emptypass_output_split) > 1:
-            updateSummaryCounts(0, 1, 0, 1)
-            pass_auth_enabled_actual = "Unabled to determine status"
-            pass_auth_enabled_status = "FAIL"
+            # Make sure only one thing was returned
+            if len(emptypass_output_split) > 1:
+                updateSummaryCounts(0, 1, 0, 1)
+                pass_auth_enabled_actual = "Unabled to determine status"
+                pass_auth_enabled_status = "FAIL"
 
-        elif len(emptypass_output_split) == 1:
-            # Check if the string started with '#' -- disabled
-            if emptypass_output[0].startswith('#'):
-                updateSummaryCounts(1, 0, 0, 1)
-
-            # The line is not commented out
-            else:
-                # Enabled
-                if "yes" in emptypass_output_split[0]:
-                    updateSummaryCounts(0, 1, 0, 1)
-                    empty_pass_enabled_actual = "enabled"
-                    empty_pass_enabled_status = "FAIL"
-
-                # Disabled
-                elif "no" in emptypass_output_split[0]:
+            elif len(emptypass_output_split) == 1:
+                # Check if the string started with '#' -- disabled
+                if emptypass_output[0].startswith('#'):
                     updateSummaryCounts(1, 0, 0, 1)
 
+                # The line is not commented out
+                else:
+                    # Enabled
+                    if "yes" in emptypass_output_split[0]:
+                        updateSummaryCounts(0, 1, 0, 1)
+                        empty_pass_enabled_actual = "enabled"
+                        empty_pass_enabled_status = "FAIL"
+
+                    # Disabled
+                    elif "no" in emptypass_output_split[0]:
+                        updateSummaryCounts(1, 0, 0, 1)
+
+            else:
+                updateSummaryCounts(0, 1, 0, 1)
+                empty_pass_enabled_actual = "Unabled to determine status"
+                empty_pass_enabled_status = "FAIL"
         else:
             updateSummaryCounts(0, 1, 0, 1)
             empty_pass_enabled_actual = "Unabled to determine status"
@@ -2345,38 +2360,43 @@ def remoteMaxAuthAttempts():
     #------------------
     try:
         maxauth_output = subprocess.run(search_cmd, capture_output=True, text=True)
-        maxauth_output_split = maxauth_output.stdout.strip().split('\n')
+        if maxauth_output.returncode == 0:
+            maxauth_output_split = maxauth_output.stdout.strip().split('\n')
 
-        # Make sure only one thing was returned
-        if len(maxauth_output_split) > 1:
-            updateSummaryCounts(0, 1, 0, 1)
-            max_auth_enabled_actual = "Unabled to determine status"
-            max_auth_enabled_status = "FAIL"
-
-        elif len(maxauth_output_split) == 1:
-
-            # Check if the string started with '#' -- disabled (so default = 6)
-            if maxauth_output[0].startswith('#'):
+            # Make sure only one thing was returned
+            if len(maxauth_output_split) > 1:
                 updateSummaryCounts(0, 1, 0, 1)
-                max_auth_enabled_actual = "6"
+                max_auth_enabled_actual = "Unabled to determine status"
                 max_auth_enabled_status = "FAIL"
 
-            # The line is not commented out - isolate the number
-            else:
-                max_auth_config = int(maxauth_output_split[0].replace("MaxAuthTries","").strip())
+            elif len(maxauth_output_split) == 1:
 
-                # Configured securely 
-                if max_auth_config <= 4 :
-                    updateSummaryCounts(1, 0, 0, 1)
-                    max_auth_enabled_actual = max_auth_config
-                    max_auth_enabled_status = "PASS"
-
-                # Configured insecurely 
-                else:
+                # Check if the string started with '#' -- disabled (so default = 6)
+                if maxauth_output[0].startswith('#'):
                     updateSummaryCounts(0, 1, 0, 1)
-                    max_auth_enabled_actual = max_auth_config
+                    max_auth_enabled_actual = "6"
                     max_auth_enabled_status = "FAIL"
 
+                # The line is not commented out - isolate the number
+                else:
+                    max_auth_config = int(maxauth_output_split[0].replace("MaxAuthTries","").strip())
+
+                    # Configured securely 
+                    if max_auth_config <= 4 :
+                        updateSummaryCounts(1, 0, 0, 1)
+                        max_auth_enabled_actual = max_auth_config
+                        max_auth_enabled_status = "PASS"
+
+                    # Configured insecurely 
+                    else:
+                        updateSummaryCounts(0, 1, 0, 1)
+                        max_auth_enabled_actual = max_auth_config
+                        max_auth_enabled_status = "FAIL"
+
+            else:
+                updateSummaryCounts(0, 1, 0, 1)
+                max_auth_enabled_actual = "Unabled to determine status"
+                max_auth_enabled_status = "FAIL"
         else:
             updateSummaryCounts(0, 1, 0, 1)
             max_auth_enabled_actual = "Unabled to determine status"
@@ -2399,19 +2419,154 @@ def remoteMaxAuthAttempts():
 
 #--------------
 # Remote / SSH Checks - idle timeout configured
-#   Search for 'ClientAliveInterval' and maybe 'ClientAlivecountMax'
+#   Search for 'ClientAliveInterval'
 #   If commented out = disabled
 #--------------
 def remoteIdleTimeoutConfigured():
     logging.debug(f"\tWorking on [ Remote : Idle Timeout Configured ]")
 
+    #------------------
+    # Define paths / strings / variables
+    #------------------
+    sshd_path = "/etc/ssh/sshd_config"
+    search_alive = "^#?ClientAliveInterval"
+    search_cmd = ['grep', '-E', search_alive, sshd_path]
+
+    # Define output variables
+    client_alive_enabled_expected = "3004"
+    client_alive_enabled_actual = "3"
+    client_alive_enabled_status = "PASS"
+
+    #------------------
+    # Search for the string
+    #------------------
+    try:
+        calive_output = subprocess.run(search_cmd, capture_output=True, text=True)
+        if calive_output.returncode == 0:
+            calive_output_split = calive_output.stdout.strip().split('\n')
+
+            # Make sure only one thing was returned
+            if len(calive_output_split) > 1:
+                updateSummaryCounts(0, 1, 0, 1)
+                client_alive_enabled_actual = "Unabled to determine status"
+                client_alive_enabled_status = "FAIL"
+
+            elif len(calive_output_split) == 1:
+
+                # Check if the string started with '#'
+                if calive_output[0].startswith('#'):
+                    updateSummaryCounts(0, 1, 0, 1)
+                    client_alive_enabled_actual = "Not configured"
+                    client_alive_enabled_status = "FAIL"
+
+                # The line is not commented out - isolate the number
+                else:
+                    client_alive_config = int(calive_output_split[0].replace("ClientAliveInterval","").strip())
+
+                    # Configured securely 
+                    if client_alive_config <= 300:
+                        updateSummaryCounts(1, 0, 0, 1)
+                        client_alive_enabled_actual = client_alive_config
+                        client_alive_enabled_status = "PASS"
+
+                    # Configured insecurely 
+                    else:
+                        updateSummaryCounts(0, 1, 0, 1)
+                        client_alive_enabled_actual = client_alive_config
+                        client_alive_enabled_status = "FAIL"
+
+            else:
+                updateSummaryCounts(0, 1, 0, 1)
+                client_alive_enabled_actual = "Unabled to determine status"
+                client_alive_enabled_status = "FAIL"
+        else:
+            updateSummaryCounts(0, 1, 0, 1)
+            client_alive_enabled_actual = "Unabled to determine status"
+            client_alive_enabled_status = "FAIL"
+
+    except Exception as e:
+        logging.exception(f"Unexpected error while searching sshd_config file [ {e} ]")
+
+    #------------------
+    # Create final dictionary for return
+    #------------------
+    client_alive_dict = {
+        "expected" : client_alive_enabled_expected,
+        "actual" : client_alive_enabled_actual,
+        "status" : client_alive_enabled_status
+    }
+
+    return client_alive_dict
+
 #--------------
 # Remote / SSH Checks - Strong Cipher
 #   List ciphers => ssh -Q cipher
-#   List MACs => ssh -Q mac
 #--------------
 def remoteStrongCipher():
     logging.debug(f"\tWorking on [ Remote : Cipher Checks ]")
+    
+    #==================
+    # Define variables
+    #==================
+    cipher_cmd = ['ssh', '-Q', 'cipher']
+
+    # Define strong ciphers
+    strong_ciphers = ["chacha20-poly1305@openssh.com", "aes256-gcm@openssh.com", "aes128-gcm@openssh.com", "aes256-ctr", "aes192-ctr", "aes128-ctr"]
+    strong_cipher_present = False
+    weak_ciphers = []
+    weak_ciphers_output = None
+
+    ciphers_expected = "Strong ciphers present"
+    ciphers_actual = "Strong ciphers present"
+    ciphers_status = "PASS"
+
+    #==================
+    # Retrieve system cihpers
+    #==================
+    try:
+        cipher_output = subprocess.run(cipher_cmd, capture_output=True, text=True)
+        cipher_output_split = cipher_output.stdout.strip().split('\n')
+
+        # Work through the reported ciphers
+        for cipher in cipher_output_split:
+
+            # Note if strong cipher is in reported list
+            if cipher in strong_cipher:
+                strong_cipher_present = True
+                updateSummaryCounts(0, 1, 0, 1)
+
+            # Work through the weak ciphers
+            else:
+                weak_ciphers.append(cipher)
+
+    except Exception as e:
+        logging.exception(f"Unexpected error while searching sshd_config file [ {e} ]")
+
+    #==================
+    # Create dictionary for return
+    #==================
+    # include weak_ciphers_found
+    # recommendation "remove weak ciphers"
+    if not strong_cipher_present:
+        ciphers_actual = "No strong ciphers present"
+        ciphers_status = "FAIL"
+
+    # Create initial dictionary
+    cipher_dict = {
+        "expected" : cipher_expected,
+        "actual" : cipher_actual,
+        "status" : cipher_status
+    }
+
+    # Process the results
+    if len(weak_ciphers) > 0:
+        # Create string for output
+        weak_ciphers_output = ','.join(weak_ciphers)
+        cipher_dict['weak_ciphers_present'] = weak_ciphers_output
+        cipher_dict['recommendation'] = "Disable weak ciphers"
+        
+
+    return cipher_dict
 
 #--------------
 # Service Minimalization - unnecessary services
@@ -2706,13 +2861,13 @@ def checkRemote():
     #---
     # Run the checks
     #---
-    root_login = remoteRootLoginDisabled(ssh_config)
-    pass_auth_disabled = remotePasswordAuthDisabled(ssh_config)
-    ssh_protocol_version = remoteProtocolVersion(ssh_config)
-    empty_password_disabled = remoteEmptyPasswordsDisabled(ssh_config)
-    max_auth_attempts = remoteMaxAuthAttempts(ssh_config)
-    idle_timeout_configured = remoteIdleTimeoutConfigured(ssh_config)
-    strong_cipher = remoteStrongCipher(ssh_config)
+    root_login = remoteRootLoginDisabled()
+    pass_auth_disabled = remotePasswordAuthDisabled()
+    ssh_protocol_version = remoteProtocolVersion()
+    empty_password_disabled = remoteEmptyPasswordsDisabled()
+    max_auth_attempts = remoteMaxAuthAttempts()
+    idle_timeout_configured = remoteIdleTimeoutConfigured()
+    strong_cipher = remoteStrongCipher()
 
     #---
     # Update dictionary
