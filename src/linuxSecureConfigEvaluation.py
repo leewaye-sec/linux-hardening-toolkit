@@ -1153,7 +1153,6 @@ def firewallListeningPorts():
 
     #=============
     # Create information
-    #   FIGURE OUT HOW TO MAKE THIS HAPPY FOR JSON
     #=============
     # Grab the info from ports_info
     #   If not in ports_info, fill out as unknown
@@ -2570,12 +2569,17 @@ def remoteStrongCipher():
 
 #--------------
 # Service Minimalization - unnecessary services
+#   Main cmd : systemctl list-units --type=service --state=running
+#   Get services information from services.py
+#       service_info = services.systemServicesInformation()
 #--------------
-def servicesUnnecessary():
-    logging.debug(f"\tWorking on [ Service Minimization : Unnecessary Services ]")
+def systemServicesAudit():
+    logging.debug(f"\tWorking on [ Service Minimization : System Services ]")
 
 #--------------
 # Service Minimalization - exposed network services
+#   Main cmd : ss -tulnp
+#   firewallGatherListeningPorts()
 #--------------
 def servicesExposedNetworkServices():
     logging.debug(f"\tWorking on [ Service Minimization : Exposed Network Services ]")
@@ -2584,8 +2588,8 @@ def servicesExposedNetworkServices():
 # Service Minimalization - legacy protocols
 #   (telnet, ftp, rsh, cups, avahi, unused web servers)
 #--------------
-def servicesLegacyProtocols():
-    logging.debug(f"\tWorking on [ Service Minimization : Legacy Protocols ]")
+#def servicesLegacyProtocols():
+#    logging.debug(f"\tWorking on [ Service Minimization : Legacy Protocols ]")
 
 #--------------
 # User-Privileges - users with UID 0
@@ -2900,16 +2904,17 @@ def checkServices():
     #---
     # Run the checks
     #---
-    unneccessary_serv_checks = servicesUnnecessary()
+    #unneccessary_serv_checks = servicesUnnecessary()
+    #legacy_protocol_checks = servicesLegacyProtocols()
+    sys_serv_checks = systemServicesAudit()
     exposed_net_serv_checks servicesExposedNetworkServices()
-    legacy_protocol_checks = servicesLegacyProtocols()
 
     #---
     # Update dictionary
     #---
-    service_minimization_checks_dict['unnecessary_services'] = unneccessary_serv_checks
+    service_minimization_checks_dict['active_system_services'] = sys_serv_checks
     service_minimization_checks_dict['exposed_network_services'] = exposed_net_serv_checks
-    service_minimization_checks_dict['legacy_protocols'] = legacy_protocol_checks
+    #service_minimization_checks_dict['legacy_protocols'] = legacy_protocol_checks
 
     # Quick check
     logging.debug(f"Number of Checks : {TOTAL_CHECKS} | Checks Passed : {PASSES} | Checks Failed : {FAILURES} | Warnings : {WARNINGS}")
@@ -3269,6 +3274,7 @@ def main():
         help=textwrap.dedent(audit_info)
     )
 
+    '''
     #-----------
     # remediation
     #-----------
@@ -3302,6 +3308,7 @@ def main():
         help=textwrap.dedent(audit_info)
     )
 
+    '''
     #========================
     # Process Passed Arguments
     #========================
@@ -3320,7 +3327,7 @@ def main():
     # Determine if output to STDOUT is defined
     PRINT = True if args.print else false
 
-    # Determine output name (if defined or generated(
+    # Determine output name (if defined or generated)
     OUTPUT = args.output if args.output else generateOutputName()
 
     #-------------

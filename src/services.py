@@ -260,15 +260,372 @@ def standardPortDefinitionInformation():
 
     return ports_dict
 
+#==============================
+# Reports services for service minimization checks
+#==============================
+def systemServicesInformation():
+    services = {
+        "sshd": {
+            "classification": "Essential",
+            "risk": "LOW",
+            "recommended": "Yes",
+            "status_if_running": "PASS",
+            "recommendation": "Restrict SSH access to trusted IP ranges and enforce key-based authentication"
+        },
+
+        "systemd-journald": {
+            "classification": "Essential",
+            "risk": "LOW",
+            "recommended": "Yes",
+            "status_if_running": "PASS",
+            "recommendation": "Ensure persistent logging is enabled"
+        },
+
+        "rsyslog": {
+            "classification": "Logging",
+            "risk": "LOW",
+            "recommended": "Yes",
+            "status_if_running": "PASS",
+            "recommendation": "Centralize and rotate logs appropriately"
+        },
+
+        "auditd": {
+            "classification": "Security Auditing",
+            "risk": "LOW",
+            "recommended": "Yes",
+            "status_if_running": "PASS",
+            "recommendation": "Ensure audit logging rules are configured properly"
+        },
+
+        "chronyd": {
+            "classification": "Infrastructure",
+            "risk": "LOW",
+            "recommended": "Yes",
+            "status_if_running": "PASS",
+            "recommendation": "Synchronize time with trusted NTP servers"
+        },
+
+        "systemd-timesyncd": {
+            "classification": "Infrastructure",
+            "risk": "LOW",
+            "recommended": "Yes",
+            "status_if_running": "PASS",
+            "recommendation": "Ensure accurate system time synchronization"
+        },
+
+        "cron": {
+            "classification": "Infrastructure",
+            "risk": "LOW",
+            "recommended": "Yes",
+            "status_if_running": "INFO",
+            "recommendation": "Review scheduled tasks for unauthorized entries"
+        },
+
+        "crond": {
+            "classification": "Infrastructure",
+            "risk": "LOW",
+            "recommended": "Yes",
+            "status_if_running": "INFO",
+            "recommendation": "Review scheduled tasks for unauthorized entries"
+        },
+
+        "nginx": {
+            "classification": "Web Server",
+            "risk": "MEDIUM",
+            "recommended": "Depends",
+            "status_if_running": "INFO",
+            "recommendation": "Validate intended exposure and harden TLS configuration"
+        },
+
+        "apache2": {
+            "classification": "Web Server",
+            "risk": "MEDIUM",
+            "recommended": "Depends",
+            "status_if_running": "INFO",
+            "recommendation": "Disable unused modules and enforce HTTPS"
+        },
+
+        "httpd": {
+            "classification": "Web Server",
+            "risk": "MEDIUM",
+            "recommended": "Depends",
+            "status_if_running": "INFO",
+            "recommendation": "Disable unnecessary functionality and validate exposure"
+        },
+
+        "mysql": {
+            "classification": "Database",
+            "risk": "HIGH",
+            "recommended": "Internal Only",
+            "status_if_running": "WARN",
+            "recommendation": "Restrict access to trusted internal systems only"
+        },
+
+        "mysqld": {
+            "classification": "Database",
+            "risk": "HIGH",
+            "recommended": "Internal Only",
+            "status_if_running": "WARN",
+            "recommendation": "Bind database service to localhost or private interfaces"
+        },
+
+        "postgresql": {
+            "classification": "Database",
+            "risk": "HIGH",
+            "recommended": "Internal Only",
+            "status_if_running": "WARN",
+            "recommendation": "Restrict external connectivity and enforce authentication"
+        },
+
+        "mongod": {
+            "classification": "Database",
+            "risk": "HIGH",
+            "recommended": "Internal Only",
+            "status_if_running": "WARN",
+            "recommendation": "Disable public exposure and require authentication"
+        },
+
+        "redis-server": {
+            "classification": "Database",
+            "risk": "HIGH",
+            "recommended": "Internal Only",
+            "status_if_running": "WARN",
+            "recommendation": "Restrict Redis to internal interfaces and enable authentication"
+        },
+
+        "docker": {
+            "classification": "Containerization",
+            "risk": "MEDIUM",
+            "recommended": "Depends",
+            "status_if_running": "INFO",
+            "recommendation": "Restrict Docker socket access and validate daemon exposure"
+        },
+
+        "containerd": {
+            "classification": "Containerization",
+            "risk": "MEDIUM",
+            "recommended": "Depends",
+            "status_if_running": "INFO",
+            "recommendation": "Validate container runtime security settings"
+        },
+
+        "kubelet": {
+            "classification": "Kubernetes",
+            "risk": "HIGH",
+            "recommended": "Internal Only",
+            "status_if_running": "WARN",
+            "recommendation": "Ensure authentication and authorization are enforced"
+        },
+
+        "etcd": {
+            "classification": "Kubernetes",
+            "risk": "CRITICAL",
+            "recommended": "Internal Only",
+            "status_if_running": "WARN",
+            "recommendation": "Restrict access and enable TLS encryption"
+        },
+
+        "prometheus": {
+            "classification": "Monitoring",
+            "risk": "MEDIUM",
+            "recommended": "Internal Only",
+            "status_if_running": "INFO",
+            "recommendation": "Restrict metrics access to trusted systems"
+        },
+
+        "grafana-server": {
+            "classification": "Monitoring",
+            "risk": "MEDIUM",
+            "recommended": "Internal Only",
+            "status_if_running": "WARN",
+            "recommendation": "Require authentication and avoid public exposure"
+        },
+
+        "telnet": {
+            "classification": "Legacy/Insecure",
+            "risk": "HIGH",
+            "recommended": "No",
+            "status_if_running": "FAIL",
+            "recommendation": "Remove Telnet and replace with SSH"
+        },
+
+        "telnet.socket": {
+            "classification": "Legacy/Insecure",
+            "risk": "HIGH",
+            "recommended": "No",
+            "status_if_running": "FAIL",
+            "recommendation": "Disable Telnet socket service immediately"
+        },
+
+        "vsftpd": {
+            "classification": "Legacy/Insecure",
+            "risk": "HIGH",
+            "recommended": "No",
+            "status_if_running": "FAIL",
+            "recommendation": "Replace FTP with SFTP or SCP"
+        },
+
+        "proftpd": {
+            "classification": "Legacy/Insecure",
+            "risk": "HIGH",
+            "recommended": "No",
+            "status_if_running": "FAIL",
+            "recommendation": "Replace insecure FTP services"
+        },
+
+        "tftpd": {
+            "classification": "Legacy/Insecure",
+            "risk": "HIGH",
+            "recommended": "No",
+            "status_if_running": "FAIL",
+            "recommendation": "Disable TFTP unless explicitly required"
+        },
+
+        "rsh": {
+            "classification": "Legacy/Insecure",
+            "risk": "HIGH",
+            "recommended": "No",
+            "status_if_running": "FAIL",
+            "recommendation": "Remove insecure remote shell services"
+        },
+
+        "rexec": {
+            "classification": "Legacy/Insecure",
+            "risk": "HIGH",
+            "recommended": "No",
+            "status_if_running": "FAIL",
+            "recommendation": "Disable insecure remote execution services"
+        },
+
+        "rlogin": {
+            "classification": "Legacy/Insecure",
+            "risk": "HIGH",
+            "recommended": "No",
+            "status_if_running": "FAIL",
+            "recommendation": "Remove insecure legacy authentication services"
+        },
+
+        "cups": {
+            "classification": "Optional Desktop",
+            "risk": "MEDIUM",
+            "recommended": "Depends",
+            "status_if_running": "WARN",
+            "recommendation": "Disable printing services on servers if unnecessary"
+        },
+
+        "avahi-daemon": {
+            "classification": "Optional Desktop",
+            "risk": "MEDIUM",
+            "recommended": "No",
+            "status_if_running": "WARN",
+            "recommendation": "Disable multicast discovery services on servers"
+        },
+
+        "bluetooth": {
+            "classification": "Optional Hardware",
+            "risk": "MEDIUM",
+            "recommended": "No",
+            "status_if_running": "WARN",
+            "recommendation": "Disable Bluetooth services on systems where unnecessary"
+        },
+
+        "smb": {
+            "classification": "File Sharing",
+            "risk": "HIGH",
+            "recommended": "Internal Only",
+            "status_if_running": "WARN",
+            "recommendation": "Restrict SMB exposure and disable SMBv1"
+        },
+
+        "nmb": {
+            "classification": "File Sharing",
+            "risk": "HIGH",
+            "recommended": "Internal Only",
+            "status_if_running": "WARN",
+            "recommendation": "Restrict NetBIOS exposure"
+        },
+
+        "nfs-server": {
+            "classification": "File Sharing",
+            "risk": "HIGH",
+            "recommended": "Internal Only",
+            "status_if_running": "WARN",
+            "recommendation": "Restrict NFS exports to trusted systems"
+        },
+
+        "rpcbind": {
+            "classification": "Infrastructure",
+            "risk": "MEDIUM",
+            "recommended": "Depends",
+            "status_if_running": "WARN",
+            "recommendation": "Disable RPC services if not required"
+        },
+
+        "snmpd": {
+            "classification": "Monitoring",
+            "risk": "HIGH",
+            "recommended": "Internal Only",
+            "status_if_running": "WARN",
+            "recommendation": "Use SNMPv3 and restrict community access"
+        },
+
+        "named": {
+            "classification": "DNS",
+            "risk": "MEDIUM",
+            "recommended": "Depends",
+            "status_if_running": "INFO",
+            "recommendation": "Restrict recursive queries and zone transfers"
+        },
+
+        "bind9": {
+            "classification": "DNS",
+            "risk": "MEDIUM",
+            "recommended": "Depends",
+            "status_if_running": "INFO",
+            "recommendation": "Restrict DNS recursion and external administration"
+        },
+
+        "fail2ban": {
+            "classification": "Security",
+            "risk": "LOW",
+            "recommended": "Yes",
+            "status_if_running": "PASS",
+            "recommendation": "Ensure brute-force protections are properly configured"
+        },
+
+        "clamav-daemon": {
+            "classification": "Security",
+            "risk": "LOW",
+            "recommended": "Optional",
+            "status_if_running": "INFO",
+            "recommendation": "Keep malware definitions updated"
+        },
+
+        "aide": {
+            "classification": "Security",
+            "risk": "LOW",
+            "recommended": "Yes",
+            "status_if_running": "PASS",
+            "recommendation": "Regularly validate file integrity baselines"
+        }
+    }
+
+    return services
+
 #==========================================================================
 # Main
 #==========================================================================
 def main():
 
     # Print Services information
-    services_dict = standardPortDefinitionInformation()
-    for service in services_dict:
+    port_service_dict = standardPortDefinitionInformation()
+    for service in port_services_dict:
         print(f"{service}")
+
+    # Service information
+    system_service_dict = systemServicesInformation()
+    for sys_service in system_services_dict:
+        print(f"{sys_service}")
 
 if __name__="__main__":
     main()
