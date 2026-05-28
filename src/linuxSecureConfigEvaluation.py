@@ -2791,9 +2791,18 @@ def presentAccountsChecks():
             # Split per line
             passwd_cat_output_split = passwd_cat_output.stdout.strip().split('\n')
 
+
             # For each entry create dictionary
             for passwd_user in passwd_cat_output_split:
                 user_split = passwd_user.split(':')
+
+                if user_split[2] == 0:
+                    account_type = "root"
+                elif user_split[2] < 1000:
+                    account_type = "system"
+                elif user_split[2] >= 1000:
+                    account_type = "user"
+
                 acct = {
                     "username" : user_split[0],
                     "password" : user_split[1],
@@ -2802,11 +2811,11 @@ def presentAccountsChecks():
                     "GECOS" : user_split[4],
                     "home_dir" : user_split[5],
                     "shell" : user_split[6],
-                    "acct_type" : "user" if int(user_split[2]) >= 1000 else "system"
+                    "acct_type" : account_type
                 }
 
                 # Append the dictionaries to appropriate array
-                if acct['acct_type'] == "user":
+                if acct['acct_type'] == "user" or acct['acct_type'] == "root":
                     user_accts.append(user)
                 else:
                     sys_accts.append(user)
@@ -2829,7 +2838,118 @@ def presentAccountsChecks():
     return accounts_present
 
 #--------------
-# User-Privileges - user accounts (uid >= 1000)
+# User account checks via chage
+#--------------
+def userAccountChageChecks(uname):
+    check = "chage"
+    logging.debug(f"\tWorking on [ User Privileges : User Account Checks - {check}]")
+
+    # Set variables
+    chage_cmd = ['chage', 'l', uname]
+
+    acct_expir = "Unable to determine"
+    last_pw_change = "Unable to determine"
+    passw_expir  = "Unable to determine"
+
+    # 'search' strings
+    ls_pw_ch = "Last password change"
+    pw_expir = "Password expires"
+    ac_expir = "Account expires"
+
+    # Run checks
+    try:
+        chage_output = subprocess.run(chage_cmd, capture_output=True, text=True)
+        # Work through the results
+        chage_output_split = chage_output.stdout.strip().split('\n')
+
+        # Work through the split output and isolate results
+        for info in chage_output_split:
+            if ls_pw_ch in info:
+                # Split the line further to isolate value
+                last_pw_change = info.split(':').strip()[1]
+            elif pw_expir in info:
+                # Split the line further to isolate value
+                passw_expir = info.split(':').strip()[1]
+            elif ac_expir in info:
+                # Split the line further to isolate value
+                acct_expir = info.split(':').strip()[1]
+
+    except Exception as e:
+        logging.exception(f"Unexpected error while running '{check}' checks [ {e} ]")
+
+    return ac_expir, last_pw_ch, passw_expir
+
+#--------------
+# User account checks via passwd
+#--------------
+def userAccountPasswdChecks(uname):
+    check = "passwd"
+    logging.debug(f"\tWorking on [ User Privileges : User Account Checks - {check}]")
+
+    # Set variables
+    passwd_cmd = ['passwd', '-S', uname]
+    acct_expir = "Unable to determine"
+
+    # Run checks
+    try:
+        passwd_output = subprocess.run(passwd_cmd, capture_output=True, text=True)
+
+        # Determine the state of the password
+        passwd_output_split = passwd_output.stdout.strip().split()
+
+        acct_state = passwd_output_split[1]
+
+        match acct_state:
+            case "P":
+                acct_expir = "active"
+            case "L":
+                acct_expir = "locked"
+            case "LK":
+                acct_expir = "locked"
+            case "NP":
+                acct_expir = "empty"
+            case "PS":
+                acct_expir = "password set"
+            case _:
+                acct_expir = "unknown"
+
+    except Exception as e:
+        logging.exception(f"Unexpected error while running '{check}' checks [ {e} ]")
+
+    return acct_expir
+
+#--------------
+# User account checks via lslogins
+#--------------
+def userAccountLastLoginCheck(uname):
+    check = "lslogins"
+    logging.debug(f"\tWorking on [ User Privileges : User Account Checks - {check}]")
+
+    # Set variables
+    lslogins_cmd = ['lslogins', uname, '-o','LAST-LOGIN']
+    last_login = "Unable to determine"
+
+    # Run checks
+    try:
+        lslogins_output = subprocess.run(lslogins_cmd, capture_output=True, text=True)
+
+        # Determine last login
+        lslogins_output_split = lslogins_output.stdout.strip().split('\n')
+
+        # Work through
+        for info in lslogins_output_split:
+            # Check for the info
+            if "Last login:" in info:
+                last_login = info.replace("Last Login:","").strip()
+                break
+
+    except Exception as e:
+        logging.exception(f"Unexpected error while running '{check}' checks [ {e} ]")
+
+    return last_login
+
+#--------------
+# User-Privileges - user accounts
 # Check the username (if it is active or locked) => passwd -S <username>
 #   P = active password / L = locked / NP = no password (empty) / PS = password set / LK = locked
 # Gather usernames on the system (lastlog -b 60)
@@ -2838,11 +2958,85 @@ def presentAccountsChecks():
 def auditUserAccounts(passed_user_accts):
     logging.debug(f"\tWorking on [ User Privileges : User Account Checks]")
 
+    users_output_dict = {}
+
+    #==============
+    # Work through the passed users
+    #==============
+    for user in passed_user_accounts:
+
+        # Isolate username
+        username = user['username']
+
+        # Gather 'chage' information
+        acct_expir, last_pw_change, pw_expir = userAccountChageChecks(username)
+
+        # Gather 'passwd' information
+        pw_status = userAccountPasswdChecks(username)
+
+        # Gather 'lslogins' information
+        last_log = userAccountLastLoginCheck(username)
+
+        #==============
+        # Build user dictionary
+        #==============
+        temp_u_dict = {
+            "UID" : user['UID'],
+            "GID" : user['GID'],
+            "Home_dir" : user['home_dir'],
+            "Comments" : user['GECOS'],
+            "Account_Type" : user['acct_type'],
+            "Last_password_change" : last_pw_change,
+            "Account_expiration" : acct_expir,
+            "Password_expiration" : pw_expir,
+            "Password_status" : pw_status,
+            "Last_login" : last_log,
+        }
+
+        users_output_dict[username] = temp_u_dict
+
+    return users_output_dict
+
 #--------------
 # User-Privileges - system accounts (uid < 1000)
 #--------------
 def auditSystemAccounts(passed_sys_accts):
     logging.debug(f"\tWorking on [ User Privileges : System Account Checks]")
+
+    sys_output_dict = {}
+
+    #==============
+    # Work through the passed users
+    #==============
+    for sys in passed_sys_accounts:
+
+        # Isolate username
+        username = sys['username']
+
+        # Gather 'passwd' information
+        pw_status = userAccountPasswdChecks(username)
+
+        warning = "PASS"
+        shell = "Non-Iteractive Shell"
+        # Determine if shell type is interactive
+        if sys['shell'] != "/usr/sbin/nologin" or sys['shell'] != "/bin/false"
+            shell = "Iteractive Shell"
+            warning = "FAIL"
+
+        temp_s_dict = {
+            "UID" : sys['UID'],
+            "GID" : sys['GID'],
+            "Home_dir" : sys['home_dir'],
+            "Comments" : sys['GECOS'],
+            "Account_Type" : sys['acct_type'],
+            "Pasword_Status" : pw_status,
+            "Shell_Type" : shell,
+            "Shell_Status" : warning
+        }
+
+        sys_output_dict[username] = temp_s_dict
+
+    return sys_output_dict
 
 #==========================================
 # Auto-Update Checks
@@ -3161,22 +3355,12 @@ def checkUserPrivileges():
     sudo_users_checks = userPrivSUDOGroupMemberships()
     present_accounts_checks = presentAccountsChecks()
 
-    # Report user accounts and system accounts
-    #inactive_accounts_checks = userPrivInactiveAccounts()
-    #empty_passwords_checks = userPrivEmptyPasswords()
-    #unauthorized_user_checks = userPrivUnauthorizedUsers()
-    #service_accounts_checks = userPrivServiceAccountShell()
-
     #---
     # Update dictionary
     #---
     user_priv_checks_dict['uid_0_accounts'] = uid_0_checks
     user_priv_checks_dict['sudo_users'] = sudo_users_checks
     user_priv_checks_dict['accounts_present'] = present_accounts_checks
-    #user_priv_checks_dict['inactive_accounts'] = inactive_accounts_checks
-    #user_priv_checks_dict['empty_passwords'] = empty_passwords_checks
-    #user_priv_checks_dict['unauthorized_users'] = unauthorized_user_checks
-    #user_priv_checks_dict['service_accounts_with_shells'] = service_accounts_checks
 
     # Quick check
     logging.debug(f"Number of Checks : {TOTAL_CHECKS} | Checks Passed : {PASSES} | Checks Failed : {FAILURES} | Warnings : {WARNINGS}")
@@ -3206,9 +3390,9 @@ def auditChecksFullWrapper():
     #audit_metadata_dict = metaDataGenerator()
     overall_scan_info["scan_metadata"] = metaDataGenerator()
 
-    #------------
+    #=============================================
     # Audit Checks
-    #------------
+    #=============================================
     audit_checks = {}
 
     # Auto-Update Checks
@@ -3247,23 +3431,37 @@ def auditChecksFullWrapper():
     upriv_dict = checkUserPrivileges()
     audit_checks["user_privileges_check"] = upriv_dict 
 
-    #------------
+    #=============================================
     # Create audit dictionary and translate to json
-    #------------
+    #=============================================
     # Provide summary (total checks, total pass, total fail, total warning?)
     overall_scann_info["audit_checks"] = audit_checks
 
     # Create the JSON output
     audit_ouput_json = json.dumps(overall_scan_info, indent=4, sort_keys=True)
 
-    # Quick print check
-    print(audit_ouput_json)
+    #=============================================
+    # Output
+    #=============================================
+    # If print to stdout only
+    if PRINT:
+        # Quick print check
+        print(audit_ouput_json)
 
-#==============
-# Wrapper for Remediation Checks and Steps
-#==============
-def remediateWrapper():
-    logging.info(f"Begining Remediation")
+    else:
+        # Print to stdout
+        print(audit_ouput_json)
+
+        # Create output
+        try:
+            with open(OUTPUT, "w") as file:
+                file.write(audit_ouput_json)
+        except PermissionError:
+            logging.exception(f"Failed to write output to {OUTPUT} - Permissions Error")
+        except IOError as e:
+            logging.exception(f"Failed to write output to {OUTPUT} - I/O Error [ {e} ]")
+        except Exception as e:
+            logging.exception(f"Failed to write output to {OUTPUT} - Unexpeced Error [ {e} ]")
 
 #==============
 # Determine Linux OS
@@ -3496,41 +3694,6 @@ def main():
         help=textwrap.dedent(audit_info)
     )
 
-    '''
-    #-----------
-    # remediation
-    #-----------
-    remediation_parser = subparsers.add_parser('remediation', help = 'Test a specific test file between specified clients', parents=[global_parser])
-
-    # Can select full OR subset
-    remediation_type = remediation_parser.add_mutually_exclusive_group(required=True)
-
-    # Full Audit
-    remediation_type.add_argument('-f', '--full', action='store_true', help='Complete all audit checks')
-
-    # Audit Remediation Info
-    remediation_info = """\
-    Remediation Options Available:
-        a : auto-updates enabled
-        c : credential / password policy
-        k : kernel / system
-        r : remote / SSH
-        s : services
-        u : user-privileges"""
-
-    # Subset remediation
-    audit_type.add_argument(
-        '-s', 
-        '--subset', 
-        type=str.lower,
-        #metavar='CHECKS',
-        choices=['a', 'c', 'k', 'r', 's', 'u'], 
-        # allow multiple options to be selected
-        nargs='+', 
-        help=textwrap.dedent(audit_info)
-    )
-
-    '''
     #========================
     # Process Passed Arguments
     #========================
@@ -3580,12 +3743,6 @@ def main():
     elif args.subcommand == 'audit':
         auditChecksFullWrapper()
         print(f"AUDIT TREE")
-
-    #-------------
-    # Audit and Remediation
-    #-------------
-    elif args.subcommand == 'remediate':
-        print(f"REMEDIATION TREE")
 
 if __name__="__main__":
     main()
