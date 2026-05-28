@@ -1101,7 +1101,7 @@ def firewallGatherListeningPorts():
         output_split = ports_output.stdout.strip().split('\n')
 
         # Process the output into dictionaries (skip the table header line)
-        for line in lines[1:]:
+        for line in output_split[1:]:
 
             # Skip lines that are not state LISTEN
             if "LISTEN" not in line:
@@ -2568,6 +2568,40 @@ def remoteStrongCipher():
     return cipher_dict
 
 #--------------
+# Service Checks - Provide nested dictionaries of some ports and their associated info
+#--------------
+def servicesGatherSystemServices():
+    logging.debug(f"\tRetrieving current system services")
+
+    # Grab / Process the services on system
+    services_cmd = ["systemctl", "list-units", "--type=service", "--state=running"]
+    system_services = []
+
+    # Run the command, gather output, process
+    try:
+        services_output = subprocess.run(services_cmd, capture_output=True, text=True)
+        serv_out_split = services_output.stdout.strip().split('\n')
+
+        # Process the output into dictionaries (skip the table header line and last 4 info lines)
+        for line in serv_out_split[1:-5]:
+
+            columns = line.split()
+            # Make sure we have the proper number of columns (expecting 5)
+            if len(columns) == 5:
+                system_services.append({
+                    "Unit": columns[0],
+                    "Load": columns[1],
+                    "Active": columns[2],
+                    "Sub": columns[3],
+                    "Description": columns[4],
+                })
+
+    except Exception as e:
+        logging.exception(f"Failed to retreive system services [ {e} ]")
+
+    return system_services
+
+#--------------
 # Service Minimalization - unnecessary services
 #   Main cmd : systemctl list-units --type=service --state=running
 #   Get services information from services.py
@@ -2576,20 +2610,44 @@ def remoteStrongCipher():
 def systemServicesAudit():
     logging.debug(f"\tWorking on [ Service Minimization : System Services ]")
 
-#--------------
-# Service Minimalization - exposed network services
-#   Main cmd : ss -tulnp
-#   firewallGatherListeningPorts()
-#--------------
-def servicesExposedNetworkServices():
-    logging.debug(f"\tWorking on [ Service Minimization : Exposed Network Services ]")
+    # Dictionary to return
+    service_minimization = {}
 
-#--------------
-# Service Minimalization - legacy protocols
-#   (telnet, ftp, rsh, cups, avahi, unused web servers)
-#--------------
-#def servicesLegacyProtocols():
-#    logging.debug(f"\tWorking on [ Service Minimization : Legacy Protocols ]")
+    #=============
+    # Gather current system services
+    #=============
+    service_array = servicesGatherSystemServices()
+
+    #=============
+    # Grab already defined services
+    #=============
+    service_info = services.systemServicesInformation()
+
+    #=============
+    # Compare to the services listed and mark unknowns
+    #=============
+    for service in service_array:
+        service_name = service['Unit']
+        # If it's in the defined services, grab the information
+        if service_name in service_info:
+
+            specific_service_dict = service_info[service_name]
+            service_minimization[service_name] = specific_service_dict 
+
+        # No info on the listed port
+        else:
+            temp_unk = {
+                "service": service['Unit'],
+                "classification": "unkown",
+                "risk_level": "WARN",
+                "recommended": "unknown",
+                "recommendation": "Review necessity and exposure"
+            }
+
+            service_minimization[service_name] = temp_unk 
+    
+    # Return dictionary
+    return service_minimization
 
 #--------------
 # User-Privileges - users with UID 0
@@ -2597,35 +2655,194 @@ def servicesExposedNetworkServices():
 def userPrivUIDUsers():
     logging.debug(f"\tWorking on [ User Privileges : Users with UID 0 ]")
 
+
+    # Define variables
+    user_zero_path = "/etc/passwd"
+    user_zero_cmd = ['grep', ':0:', user_zero_path]
+
+    uid0_users_expected = "none"
+    uid0_users_actual = "none"
+    uid0_users_status = "PASS"
+
+    users_with_uid0 = []
+    #------------------
+    # Search for the string
+    #------------------
+    try:
+        user_zero_output = subprocess.run(user_zero_cmd, capture_output=True, text=True)
+
+        # Grep successful, return code = 0
+        #   Grap users if successful
+        if user_zero_output.returncode == 0:
+            # Split into indiv entries
+            user_zero_output_split = user_zero_output.stdout.strip().split('\n')
+
+            # For each entry, split on ':'
+            for user in user_zero_output_split:
+                user_name = user.split(':')[0]
+                # Add the username to array
+                users_with_uid0.append(user_name)
+
+            # Create string to return
+            #guid0_users = ','.join(users_with_uid0)
+            uid0_users_actual = ','.join(users_with_uid0)
+            uid0_users_status = "WARN"
+
+            # Update globals
+            updateSummaryCounts(0, 0, 1, 1)
+
+        else:
+            # Update globals
+            updateSummaryCounts(1, 0, 0, 1)
+
+    except Exception as e:
+        logging.exception(f"Unexpected error while searching {user_zero_path} [ {e} ]")
+
+    #------------------
+    # Create / return dictionary
+    #------------------
+    priv_uid_user_dict = {
+        "expected" : uid0_users_expected,
+        "actual" : uid0_users_actual,
+        "status" : uid0_users_status
+    }
+
+    return priv_uid_user_dict
+
+
 #--------------
 # User-Privileges - sudo group memberships
 #--------------
 def userPrivSUDOGroupMemberships():
     logging.debug(f"\tWorking on [ User Privileges : SUDO Group Membership]")
 
-#--------------
-# User-Privileges - inactive accounts
-#--------------
-def userPrivInactiveAccounts():
-    logging.debug(f"\tWorking on [ User Privileges : Inactive Accounts ]")
+    #------------------
+    # Define paths / strings / variables
+    #------------------
+    group_path = "/etc/group"
+    search_sudogroup = "^sudo"
+    search_cmd = ['grep', '-E', search_sudogroup, group_path]
+
+    # Define output variables
+    sudo_group_expected = "none"
+    sudo_group_actual = "none"
+    sudo_group_status = "PASS"
+
+    sudo_group_members = []
+    #------------------
+    # Search for the string
+    #------------------
+    try:
+        sudogroup_output = subprocess.run(search_cmd, capture_output=True, text=True)
+        if sudogroup_output.returncode == 0:
+            # Split by line / user
+            sudogroup_output_split = sudogroup_output.stdout.strip().split('\n')
+
+            # Gather the username
+            for user in sudogroup_output_split:
+                username = user.split(':')[-1]
+                sudo_group_members.append(username)
+
+            sudo_group_actual = ','.join(sudo_group_members)
+            sudo_group_status = "WARN"
+
+            # Update globals
+            updateSummaryCounts(0, 0, 1, 1)
+
+        else:
+            # Update globals
+            updateSummaryCounts(1, 0, 0, 1)
+
+    except Exception as e:
+        logging.exception(f"Unexpected error while searching {user_zero_path} [ {e} ]")
+
+    #------------------
+    # Create / return dictionary
+    #------------------
+    sudogroup_user_dict = {
+        "expected" : sudo_group_expected,
+        "actual" : sudo_group_actual,
+        "status" : sudo_group_status
+    }
+
+    return sudogroup_user_dict
 
 #--------------
-# User-Privileges - empty passwords
+# User-Privileges - Check all accounts present on system
 #--------------
-def userPrivEmptyPasswords():
-    logging.debug(f"\tWorking on [ User Privileges : Empty Passwords ]")
+def presentAccountsChecks():
+    logging.debug(f"\tWorking on [ User Privileges : Accounts Present]")
+
+    accounts_present = {}
+    #=================
+    # Prepare to gather accounts on system
+    #=================
+    etc_passwd_path = "/etc/passwd"
+    cat_cmd = ['cat', etc_passwd_path]
+
+    user_accts = []
+    sys_accts = []
+
+    try:
+        passwd_cat_output = subprocess.run(cat_cmd, capture_output=True, text=True)
+
+        # If the command was successful, grab the output
+        if passwd_cat_output.returncode == 0:
+            # Split per line
+            passwd_cat_output_split = passwd_cat_output.stdout.strip().split('\n')
+
+            # For each entry create dictionary
+            for passwd_user in passwd_cat_output_split:
+                user_split = passwd_user.split(':')
+                acct = {
+                    "username" : user_split[0],
+                    "password" : user_split[1],
+                    "UID" : user_split[2],
+                    "GID" : user_split[3],
+                    "GECOS" : user_split[4],
+                    "home_dir" : user_split[5],
+                    "shell" : user_split[6],
+                    "acct_type" : "user" if int(user_split[2]) >= 1000 else "system"
+                }
+
+                # Append the dictionaries to appropriate array
+                if acct['acct_type'] == "user":
+                    user_accts.append(user)
+                else:
+                    sys_accts.append(user)
+
+    except Exception as e:
+        logging.exception(f"Unexpected error while searching {user_zero_path} [ {e} ]")
+
+    #=================
+    # Process User Accounts
+    #   Check for account_state, last_login, password_status, root_account
+    #=================
+    accounts_present['user_accounts'] = auditUserAccounts(user_accts)
+    
+    #=================
+    # Process System Accounts
+    #   Check for interactive_shell, disabled_service_account
+    #=================
+    accounts_present['system_accounts'] = auditSystemAccounts(sys_accts) 
+
+    return accounts_present
 
 #--------------
-# User-Privileges - unauthorized users
+# User-Privileges - user accounts (uid >= 1000)
+# Check the username (if it is active or locked) => passwd -S <username>
+#   P = active password / L = locked / NP = no password (empty) / PS = password set / LK = locked
+# Gather usernames on the system (lastlog -b 60)
+#       If uid = 0 --> root account
 #--------------
-def userPrivUnauthorizedUsers():
-    logging.debug(f"\tWorking on [ User Privileges : Unauthorized Users ]")
+def auditUserAccounts(passed_user_accts):
+    logging.debug(f"\tWorking on [ User Privileges : User Account Checks]")
 
 #--------------
-# User-Privileges - service accounts with shells
+# User-Privileges - system accounts (uid < 1000)
 #--------------
-def userPrivServiceAccountShell():
-    logging.debug(f"\tWorking on [ User Privileges : Service Accounts with Shells ]")
+def auditSystemAccounts(passed_sys_accts):
+    logging.debug(f"\tWorking on [ User Privileges : System Account Checks]")
 
 #==========================================
 # Auto-Update Checks
@@ -2906,15 +3123,16 @@ def checkServices():
     #---
     #unneccessary_serv_checks = servicesUnnecessary()
     #legacy_protocol_checks = servicesLegacyProtocols()
+    #exposed_net_serv_checks = servicesExposedNetworkServices()
     sys_serv_checks = systemServicesAudit()
-    exposed_net_serv_checks servicesExposedNetworkServices()
+    exposed_net_serv_checks = firewallListeningPorts()
+
 
     #---
     # Update dictionary
     #---
     service_minimization_checks_dict['active_system_services'] = sys_serv_checks
     service_minimization_checks_dict['exposed_network_services'] = exposed_net_serv_checks
-    #service_minimization_checks_dict['legacy_protocols'] = legacy_protocol_checks
 
     # Quick check
     logging.debug(f"Number of Checks : {TOTAL_CHECKS} | Checks Passed : {PASSES} | Checks Failed : {FAILURES} | Warnings : {WARNINGS}")
@@ -2941,20 +3159,24 @@ def checkUserPrivileges():
     #---
     uid_0_checks = userPrivUIDUsers()
     sudo_users_checks = userPrivSUDOGroupMemberships()
-    inactive_accounts_checks = userPrivInactiveAccounts()
-    empty_passwords_checks = userPrivEmptyPasswords()
-    unauthorized_user_checks = userPrivUnauthorizedUsers()
-    service_accounts_checks = userPrivServiceAccountShell()
+    present_accounts_checks = presentAccountsChecks()
+
+    # Report user accounts and system accounts
+    #inactive_accounts_checks = userPrivInactiveAccounts()
+    #empty_passwords_checks = userPrivEmptyPasswords()
+    #unauthorized_user_checks = userPrivUnauthorizedUsers()
+    #service_accounts_checks = userPrivServiceAccountShell()
 
     #---
     # Update dictionary
     #---
     user_priv_checks_dict['uid_0_accounts'] = uid_0_checks
     user_priv_checks_dict['sudo_users'] = sudo_users_checks
-    user_priv_checks_dict['inactive_accounts'] = inactive_accounts_checks
-    user_priv_checks_dict['empty_passwords'] = empty_passwords_checks
-    user_priv_checks_dict['unauthorized_users'] = unauthorized_user_checks
-    user_priv_checks_dict['service_accounts_with_shells'] = service_accounts_checks
+    user_priv_checks_dict['accounts_present'] = present_accounts_checks
+    #user_priv_checks_dict['inactive_accounts'] = inactive_accounts_checks
+    #user_priv_checks_dict['empty_passwords'] = empty_passwords_checks
+    #user_priv_checks_dict['unauthorized_users'] = unauthorized_user_checks
+    #user_priv_checks_dict['service_accounts_with_shells'] = service_accounts_checks
 
     # Quick check
     logging.debug(f"Number of Checks : {TOTAL_CHECKS} | Checks Passed : {PASSES} | Checks Failed : {FAILURES} | Warnings : {WARNINGS}")
