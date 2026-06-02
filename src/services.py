@@ -258,7 +258,7 @@ def standardPortDefinitionInformation():
         }
     }
 
-    return ports_dict
+    return ports
 
 #==============================
 # Reports services for service minimization checks
@@ -627,5 +627,5 @@ def main():
     for sys_service in system_services_dict:
         print(f"{sys_service}")
 
-if __name__="__main__":
+if __name__ == "__main__":
     main()

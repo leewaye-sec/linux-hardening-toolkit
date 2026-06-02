@@ -25,7 +25,10 @@ import subprocess
 import json
 import platform
 import shutil
-import services.py
+import textwrap
+from datetime import datetime
+
+import services
 
 #--------------------
 # Global Variables
@@ -37,7 +40,7 @@ TIMESTAMP = timestamp_dirty.strftime("%Y%m%d_%H%M%S")
 
 # Path Definitions
 global CWD
-CWD = .os.path.abspath(os.getcwd())
+CWD = os.path.abspath(os.getcwd())
 CWD = CWD + "/"
 
 # Check metrics
@@ -101,13 +104,13 @@ def generateOutputName():
             logging.exception(f"Unexpected error while reading uid file [ {e} ]")
 
         # Add the UID to the base name
-        outputname_to_ret = f"{outputname_to_ret}_{system_identifier}.json"
+        output_name_to_ret = f"{output_name_to_ret}_{system_identifier}.json"
 
     # If path check failed or opening/reading file failed, proceed without the information
     else:
-        outputname_to_ret = f"{outputname_to_ret}.json"
+        output_name_to_ret = f"{output_name_to_ret}.json"
 
-    return outputname_to_ret 
+    return output_name_to_ret 
 
 #--------------
 # Auto-Update Checks - unattended upgrades status
@@ -132,6 +135,7 @@ def autoUpdateUpgrades():
 
         # Update globals
         updateSummaryCounts(1, 0, 0, 1)
+        logging.debug("\t\tPASSED")
 
         return unattended_upgrades_dict 
 
@@ -146,6 +150,7 @@ def autoUpdateUpgrades():
 
         # Update globals
         updateSummaryCounts(0, 1, 0, 1)
+        logging.debug("\t\tFAILED")
 
         return unattended_upgrades_dict 
 
@@ -162,6 +167,7 @@ def autoUpdatePackageManager():
     #   Arch Linux     : pacman
     #   openSUSE Linux : zypper
     #   Alpine Linux   : apk
+    overall_status = "FAIL"
     pkg_mngrs = ['apt', 'dnf', 'yum', 'pacman', 'zypper', 'apk']
 
     pkg_mgr = None
@@ -183,12 +189,14 @@ def autoUpdatePackageManager():
 
         # Update globals
         updateSummaryCounts(1, 0, 0, 1)
+        logging.debug("\t\tPASSED")
 
     else:
         overall_status == "FAIL"
 
         # Update globals
         updateSummaryCounts(0, 1, 0, 1)
+        logging.debug("\t\tFAILED")
 
     pkg_mngr_dict = {
         "expected" : expected_mngr,
@@ -217,6 +225,7 @@ def autoUpdateTimerStatus():
 
         # Update globals
         updateSummaryCounts(1, 0, 0, 1)
+        logging.debug("\t\tPASSED")
 
     else:
         timer_activity = "inactive"
@@ -224,6 +233,7 @@ def autoUpdateTimerStatus():
 
         # Update globals
         updateSummaryCounts(0, 1, 0, 1)
+        logging.debug("\t\tFAILED")
 
     # Create dictionary
     timer_status_dict = {
@@ -242,7 +252,7 @@ def autoUpdateTimerStatus():
 def credentialMinLen():
     logging.debug(f"\tWorking on [ Credentials : Minimum Password Length ]")
 
-    cred_path = "/etc/security/pwquality"
+    cred_path = "/etc/security/pwquality.conf"
     search_minlen = ["minlen"]
 
     # First ingest the file
@@ -254,7 +264,7 @@ def credentialMinLen():
         # Update globals
         updateSummaryCounts(0, 1, 0, 1)
         failure_dict = {
-            "audit_check" : "Credential Minimum Length" 
+            "audit_check" : "Credential Minimum Length",
             "audit_check_status" : "FAIL" 
         }
         return failure_dict
@@ -270,7 +280,7 @@ def credentialMinLen():
     minlen_status = "PASS"
 
     # First check: if it's commented out
-    if min_len.startswith('#')
+    if min_len.startswith('#'):
         # Update globals
         updateSummaryCounts(0, 1, 0, 1)
         actual_class = "disabled/not configured"
@@ -309,7 +319,7 @@ def credentialComplexity():
     credential_complexity_dict = {}
 
     # Define path to conf file
-    complexity_path = "/etc/security/pwquality"
+    complexity_path = "/etc/security/pwquality.conf"
     search_strings = ["minclass","dcredit","lcredit","ucredit","ocredit"]
 
     # Search the file for the strings
@@ -317,12 +327,12 @@ def credentialComplexity():
 
     # Make sure results were actually returned
     if len(found_strings) != len(search_strings):
-        logging.error(f"Failed to isolate password complexity configurations [ {complexity_path} ]")
+        logging.error(f"\t\tFailed to isolate password complexity configurations [ {complexity_path} ]")
 
         # Update globals
         updateSummaryCounts(0, len(search_strings), 0, len(search_strings))
         failure_dict = {
-            "audit_check" : "Credential Complexity" 
+            "audit_check" : "Credential Complexity",
             "audit_check_status" : "FAIL" 
         }
         return failure_dict
@@ -346,7 +356,7 @@ def credentialComplexity():
     status_class = "PASS"
 
     # First check: if it's commented out
-    if comp_minclasses.startswith('#')
+    if comp_minclasses.startswith('#'):
         # Update globals
         updateSummaryCounts(0, 1, 0, 1)
         actual_class = "disabled/not configured"
@@ -380,7 +390,7 @@ def credentialComplexity():
     status_digit = "PASS"
 
     # First check: if it's commented out
-    if comp_mindigit.startswith('#')
+    if comp_mindigit.startswith('#'):
         # Update globals
         updateSummaryCounts(0, 1, 0, 1)
         actual_digit = "disabled/not configured"
@@ -413,7 +423,7 @@ def credentialComplexity():
     status_lower = "PASS"
 
     # First check: if it's commented out
-    if comp_minlower.startswith('#')
+    if comp_minlower.startswith('#'):
         # Update globals
         updateSummaryCounts(0, 1, 0, 1)
         actual_lower = "disabled/not configured"
@@ -446,7 +456,7 @@ def credentialComplexity():
     status_upper = "PASS"
 
     # First check: if it's commented out
-    if comp_minupper.startswith('#')
+    if comp_minupper.startswith('#'):
         # Update globals
         updateSummaryCounts(0, 1, 0, 1)
         actual_upper = "disabled/not configured"
@@ -479,7 +489,7 @@ def credentialComplexity():
     status_special = "PASS"
 
     # First check: if it's commented out
-    if comp_minspecial.startswith('#')
+    if comp_minspecial.startswith('#'):
         # Update globals
         updateSummaryCounts(0, 1, 0, 1)
         actual_special = "disabled/not configured"
@@ -522,20 +532,20 @@ def credentialExpiration():
     logging.debug(f"\tWorking on [ Credentials : Expiration ]")
 
     # Define path to conf file
-    expire_path = "/etc/login.defts"
+    expire_path = "/etc/login.defs"
     search_strings = ["PASS_MAX_DAYS"]
 
     # Search the file for the string
     found_strings = isolateStringInFile(expire_path, search_strings)
 
     # Ensure something was returned
-    if len(search_strings) != len(found_strings)
-        logging.error(f"Failed to isolate password expiration configurations [ {expire_path} ]")
+    if len(search_strings) != len(found_strings):
+        logging.error(f"\t\tFailed to isolate password expiration configurations [ {expire_path} ]")
 
         # Update globals
         updateSummaryCounts(0, len(search_strings), 0, len(search_strings))
         failure_dict = {
-            "audit_check" : "Credential Expiration" 
+            "audit_check" : "Credential Expiration",
             "audit_check_status" : "FAIL" 
         }
         return failure_dict
@@ -549,7 +559,7 @@ def credentialExpiration():
     status_expire = "PASS"
 
     # First check: if it's commented out
-    if found_expire_days.startswith('#')
+    if found_expire_days.startswith('#'):
         # Update globals
         updateSummaryCounts(0, 1, 0, 1)
         actual_expire = "disabled/not configured"
@@ -602,14 +612,14 @@ def credentialReusePrevention():
     found_strings = isolateStringInFile(path, search_string)
 
     # Ensure something was returned
-    if len(search_string) != len(found_strings)
-        logging.error(f"Failed to isolate password reuse configurations [ {path} ]")
+    if len(search_string) != len(found_strings):
+        logging.error(f"\t\tFailed to isolate password reuse configurations [ {path} ]")
 
         # Update globals
-        updateSummaryCounts(0, len(search_strings), 0, len(search_strings))
+        updateSummaryCounts(0, len(search_string), 0, len(search_string))
 
         failure_dict = {
-            "audit_check" : "Credential Reuse" 
+            "audit_check" : "Credential Reuse",
             "audit_check_status" : "FAIL" 
         }
         return failure_dict
@@ -622,8 +632,8 @@ def credentialReusePrevention():
     status_reuse = "PASS"
 
     # Make sure it isn't commented out
-    if found_reuse.startswith('#')
-        # Update globals
+    if found_reuse.startswith('#'): 
+        # Update globals 
         updateSummaryCounts(0, 1, 0, 1)
         actual_expire = "disabled/not configured"
         status_expire = "FAIL"
@@ -674,14 +684,14 @@ def credentialLockout():
     found_strings = isolateStringInFile(path, search_string)
 
     # Ensure something was returned
-    if len(search_string) != len(found_strings)
-        logging.error(f"Failed to isolate password lockout configurations [ {path} ]")
+    if len(search_string) != len(found_strings):
+        logging.error(f"\t\tFailed to isolate password lockout configurations [ {path} ]")
 
         # Update globals
-        updateSummaryCounts(0, len(search_strings), 0, len(search_strings))
+        updateSummaryCounts(0, len(search_string), 0, len(search_string))
 
         failure_dict = {
-            "audit_check" : "Credential Lockout" 
+            "audit_check" : "Credential Lockout", 
             "audit_check_status" : "FAIL" 
         }
         return failure_dict
@@ -694,7 +704,7 @@ def credentialLockout():
     status_lockout = "PASS"
 
     # Make sure it isn't commented out
-    if found_lockout.startswith('#')
+    if found_lockout.startswith('#'):
         # Update globals
         updateSummaryCounts(0, 1, 0, 1)
         actual_lockout = "disabled/not configured"
@@ -925,14 +935,19 @@ def firewallEnabled():
     # Determine if service is enabled
     #=====
     firewall_expected = "enabled"
-    firewall_actual = "enabled"
-    firewall_status = "PASS"
+    firewall_actual = "disabled"
+    firewall_status = "FAIL"
+
     try:
-        enabled_output = subprocess.check_output(cmd_str, text=True)
-        if 'enabled' in enabled_output:
+        enabled_output = subprocess.run(cmd_str, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        #if 'enabled' in enabled_output:
+        if enabled_output.returncode == 0:
             # Update global
             updateSummaryCounts(1, 0, 0, 1)
-        else:
+            firewall_actual = "enabled"
+            firewall_status = "PASS"
+        elif enabled_output.returncode >= 1 or enabled_output.returncode <= 4:
+            logging.error(f"\t\tFirewall service [ {firewall_service} ] not installed on system")
             # Update global
             updateSummaryCounts(0, 1, 0, 1)
             firewall_actual = "disabled"
@@ -948,8 +963,8 @@ def firewallEnabled():
     # Create dictionary for return
     firewall_enabled = {
         'expected' : firewall_expected,
-        'actual' : firewall_actuale,
-        'expected' : firewall_status
+        'actual' : firewall_actual,
+        'status' : firewall_status
     }
 
     return firewall_enabled
@@ -957,8 +972,22 @@ def firewallEnabled():
 #--------------
 # Firewall Checks - Firewall active
 #--------------
-def firewallActive():
+def firewallActive(fw_enabled):
     logging.debug(f"\tWorking on [ Firewall : Service Active ]")
+
+    #=====
+    # If service isn't installed, skip the check
+    #=====
+    if not fw_enabled:
+        firewall_fail = {
+            'expected' : "active",
+            'actual' : "not installed -- inactive",
+            'status' : "FAIL"
+        }
+
+        # Update global
+        updateSummaryCounts(0, 1, 0, 1)
+        return firewall_fail
 
     #=====
     # Determine checks for OS
@@ -1004,18 +1033,32 @@ def firewallActive():
     # Create dictionary for return
     firewall_active = {
         'expected' : firewall_expected,
-        'actual' : firewall_actuale,
-        'expected' : firewall_status
+        'actual' : firewall_actual,
+        'status' : firewall_status
     }
 
-    return firewall_enabled
+    return firewall_active
     
 
 #--------------
 # Firewall Checks - deny-by-default
 #--------------
-def firewallDenyDefault():
+def firewallDenyDefault(fw_enabled):
     logging.debug(f"\tWorking on [ Firewall : Deny-by-default ]")
+
+    #=====
+    # If service isn't installed, skip the check
+    #=====
+    if not fw_enabled:
+        firewall_fail = {
+            'expected' : "deny-by-default",
+            'actual' : "not installed -- no default present",
+            'status' : "FAIL"
+        }
+
+        # Update global
+        updateSummaryCounts(0, 1, 0, 1)
+        return firewall_fail
 
     #=====
     # Process based on OS
@@ -1129,8 +1172,22 @@ def firewallGatherListeningPorts():
 #--------------
 # Firewall Checks - Unnecessary Open Ports
 #--------------
-def firewallListeningPorts():
+def firewallListeningPorts(fw_enabled):
     logging.debug(f"\tWorking on [ Firewall : Unnecessary Open Ports ]")
+
+    #=====
+    # If service isn't installed, skip the check
+    #=====
+    if not fw_enabled:
+        firewall_fail = {
+            'expected' : "port checks available",
+            'actual' : "not installed -- no port checks",
+            'status' : "FAIL"
+        }
+
+        # Update global
+        updateSummaryCounts(0, 1, 0, 1)
+        return firewall_fail
 
     #=============
     # Prepare for checks
@@ -1171,8 +1228,8 @@ def firewallListeningPorts():
         else:
             temp_unk = {
                 "classification": "unknown",
-                "port" = port,
-                "service" = "unkown",
+                "port" : port,
+                "service" : "unkown",
                 "protocol": "unkown",
                 "service": "unkown",
                 "risk_level": "WARN",
@@ -1270,7 +1327,7 @@ def firewallSSHRest_sourceRestrictions():
             ssh_source_status = "FAIL"
 
     except Exception as e:
-        logging.exception(f"Failed to determine if [ {firewall_service} ] is active [ {e} ]")
+        logging.exception(f"Failed to determine [ Restricted SSH Source Rules ] [ {e} ]")
         # Update global
         updateSummaryCounts(0, 1, 0, 1)
         ssh_source_actual = "Unrestricted SSH source rules"
@@ -1332,7 +1389,7 @@ def firewallSSHRest_rateLimiting():
                     ssh_rate_status = "FAIL"
 
     except Exception as e:
-        logging.exception(f"Failed to determine if [ {firewall_service} ] is active [ {e} ]")
+        logging.exception(f"Failed to determine [ SSH Rate Limited ] [ {e} ]")
         # Update global
         updateSummaryCounts(0, 1, 0, 1)
         ssh_rate_actual = "NO SSH rate limit"
@@ -1395,7 +1452,7 @@ def firewallSSHRest_ipv6Restrictions():
                         updateSummaryCounts(1, 0, 0, 1)
 
     except Exception as e:
-        logging.exception(f"Failed to determine if [ {firewall_service} ] is active [ {e} ]")
+        logging.exception(f"Failed to determine [ SSH IPv6 Restrictions ] [ {e} ]")
         # Update global
         updateSummaryCounts(0, 1, 0, 1)
         ssh_v6_actual = "NO SSH IPv6 Restrictions"
@@ -1419,8 +1476,22 @@ def firewallSSHRest_ipv6Restrictions():
 #   Rate Limiting
 #   IPv6 Restrictions
 #--------------
-def firewallSSHRestricted():
+def firewallSSHRestricted(fw_enabled):
     logging.debug(f"\tWorking on [ Firewall : SSH Restrictions ]")
+
+    #=====
+    # If service isn't installed, skip the check
+    #=====
+    if not fw_enabled:
+        firewall_fail = {
+            'expected' : "SSH Restrictions Configured",
+            'actual' : "not installed -- no ssh restrictions configured",
+            'expected' : "FAIL"
+        }
+
+        # Update global
+        updateSummaryCounts(0, 1, 0, 4)
+        return firewall_fail
 
     # Create final reporting distionary
     fw_ssh_restrictions_dict = {}
@@ -1936,7 +2007,7 @@ def permissionsSUIDSGIDBinaries():
     #==============
     # Check for suid files
     #==============
-    suid_cmd = ['find', base_path, '-type', 'f', '-perm', '/4000'
+    suid_cmd = ['find', base_path, '-type', 'f', '-perm', '/4000']
     suid_expected = "No SUID files present"
     suid_actual = "No SUID files present"
     suid_status = "PASS"
@@ -1968,7 +2039,7 @@ def permissionsSUIDSGIDBinaries():
     #==============
     # Check for sgid files
     #==============
-    sgid_cmd = ['find', base_path, '-type', 'f', '-perm', '/2000'
+    sgid_cmd = ['find', base_path, '-type', 'f', '-perm', '/2000']
     sgid_expected = "No SGID files present"
     sgid_actual = "No SGID files present"
     sgid_status = "PASS"
@@ -3019,7 +3090,7 @@ def auditSystemAccounts(passed_sys_accts):
         warning = "PASS"
         shell = "Non-Iteractive Shell"
         # Determine if shell type is interactive
-        if sys['shell'] != "/usr/sbin/nologin" or sys['shell'] != "/bin/false"
+        if sys['shell'] != "/usr/sbin/nologin" or sys['shell'] != "/bin/false":
             shell = "Iteractive Shell"
             warning = "FAIL"
 
@@ -3159,10 +3230,16 @@ def checkFirewall():
     # Run the checks
     #---
     enabled_check = firewallEnabled()
-    active_check = firewallActive()
-    deny_check = firewallDenyDefault()
-    listening_ports_check = firewallListeningPorts()
-    restricted_ssh_check = firewallSSHRestricted()
+
+    firewall_enabled = False
+    # Quick determination
+    if enabled_check['actual'] == 'enabled':
+        firewall_enabled = True
+
+    active_check = firewallActive(firewall_enabled)
+    deny_check = firewallDenyDefault(firewall_enabled)
+    listening_ports_check = firewallListeningPorts(firewall_enabled)
+    restricted_ssh_check = firewallSSHRestricted(firewall_enabled)
 
     #---
     # Update dictionary
@@ -3176,7 +3253,7 @@ def checkFirewall():
     # Quick check
     logging.debug(f"Number of Checks : {TOTAL_CHECKS} | Checks Passed : {PASSES} | Checks Failed : {FAILURES} | Warnings : {WARNINGS}")
 
-    return logging_checks_dict
+    return firewall_checks_dict
 
 #==========================================
 # Kernel / System Checks
@@ -3319,7 +3396,15 @@ def checkServices():
     #legacy_protocol_checks = servicesLegacyProtocols()
     #exposed_net_serv_checks = servicesExposedNetworkServices()
     sys_serv_checks = systemServicesAudit()
-    exposed_net_serv_checks = firewallListeningPorts()
+
+    # Add fw enabled check
+    enabled_check = firewallEnabled()
+
+    firewall_enabled = False
+    # Quick determination
+    if enabled_check['actual'] == 'enabled':
+        firewall_enabled = True
+    exposed_net_serv_checks = firewallListeningPorts(firewall_enabled)
 
 
     #---
@@ -3375,11 +3460,111 @@ def outputAuditCheckInformation():
     logging.info(f"Audit Check Information")
 
 #==============
-# Wrapper for Audit Checks
-#   Checks return dictionaries / arrays of dictionaries
+# Wrapper for Subset Audit Checks
+#==============
+def auditChecksSubsetWrapper(subset):
+    logging.info(f"Begining Audit Checks [ SUBSET AUDIT ]")
+
+    overall_scan_info = {}
+
+    #------------
+    # Create initial json string
+    #------------
+    # Audit Test Information
+    #audit_metadata_dict = metaDataGenerator()
+    overall_scan_info["scan_metadata"] = metaDataGenerator()
+
+    #=============================================
+    # Audit Checks
+    #=============================================
+    audit_checks = {}
+
+    for check in subset:
+        match check:
+            case "a":
+                # Auto-Update Checks
+                #print("Auto-Update Checks")
+                auto_update_dict = checkAutoUpdates()
+                audit_checks["auto_update_checks"] = auto_update_dict 
+            case "c":
+                #print("Credential / Password Policy Checks")
+                # Credential / Password Policy Checks
+                cred_dict = checkCredentialPassword()
+                audit_checks["credential_policy_checks"] = cred_dict 
+            case "f":
+                # Firewall Checks
+                #print("Firewall Checks")
+                firewall_dict = checkFirewall()
+                audit_checks["firewall_checks"] = firewall_dict 
+            case "k":
+                # Kernel / System Checks
+                #print("Kernel / System Checks")
+                kernel_dict = checkKernelSystem()
+                audit_checks["kernel_checks"] = kernel_dict 
+            case "l":
+                # Logging Checks
+                #print("Logging Checks")
+                logging_dict = checkLogging()
+                audit_checks["logging_configuration_checks"] = logging_dict 
+            case "p":
+                # Permissions (File) Checks
+                #print("Permissions (File) Checks")
+                file_perm_dict = checkPermissions()
+                audit_checks["file_permission_checks"] = file_perm_dict 
+            case "r":
+                # Remote / SSH Checks
+                #print("Remote / SSH Checks")
+                ssh_checks_dict = checkRemote()
+                audit_checks["ssh_remote_checks"] = ssh_checks_dict 
+            case "s":
+                # Services Check
+                #print("Services Check")
+                service_dict = checkServices()
+                audit_checks["service_configuration_checks"] = service_dict 
+            case "u":
+                # User-privileges Check
+                #print("User-privileges Check")
+                upriv_dict = checkUserPrivileges()
+                audit_checks["user_privileges_check"] = upriv_dict 
+
+    #=============================================
+    # Create audit dictionary and translate to json
+    #=============================================
+    # Provide summary (total checks, total pass, total fail, total warning?)
+    overall_scan_info["audit_checks"] = audit_checks
+
+    # Create the JSON output
+    #audit_ouput_json = json.dumps(overall_scan_info, indent=4, sort_keys=True)
+    audit_ouput_json = json.dumps(overall_scan_info, indent=4, sort_keys=False)
+
+    #=============================================
+    # Output
+    #=============================================
+    # If print to stdout only
+    if PRINT:
+        # Quick print check
+        print(audit_ouput_json)
+
+    else:
+        # Print to stdout
+        print(audit_ouput_json)
+
+        # Create output
+        try:
+            with open(OUTPUT, "w") as file:
+                file.write(audit_ouput_json)
+        except PermissionError:
+            logging.exception(f"Failed to write output to {OUTPUT} - Permissions Error")
+        except IOError as e:
+            logging.exception(f"Failed to write output to {OUTPUT} - I/O Error [ {e} ]")
+        except Exception as e:
+            logging.exception(f"Failed to write output to {OUTPUT} - Unexpeced Error [ {e} ]")
+
+#==============
+# Wrapper for Full Audit Checks
 #==============
 def auditChecksFullWrapper():
-    logging.info(f"Begining Audit Checks")
+    logging.info(f"Begining Audit Checks [ FULL AUDIT ]")
 
     overall_scan_info = {}
 
@@ -3487,10 +3672,13 @@ def getOSType():
     if os_contents is not None:
         if "ID=ubuntu" in os_contents or "ID=debian" in os_contents:
             os_ud_ret = True
-            logging.debug("\tOperating System determined to be Ubuntu/Debian")
+            logging.debug("Operating System determined to be Ubuntu/Debian")
         elif "ID=rhel" in os_contents or "ID=centos" in os_contents or "ID=rocky" in os_contents or "ID=almalinux" in os_contents:
             os_rc_ret = True
-            logging.debug("\tOperating System determined to be RHEL/CentOS")
+            logging.debug("Operating System determined to be RHEL/CentOS")
+        elif "ID_LIKE=debian" in os_contents:
+            os_ud_ret = True
+            logging.debug("Operating System determined to be Ubuntu/Debian")
 
     return os_ud_ret, os_rc_ret
 
@@ -3514,7 +3702,7 @@ def ingestFileToString(passed_path):
     try:
         # Open the file and consume contents
         with open(file_path, "r") as ifile:
-            ret_str = file.read()
+            ret_str = ifile.read()
             logging.debug(f"\tReading in file [ {file_path} ]")
     except FileNotFoundError:
         logging.exception(f"Error: File was not found [ {file_path} ]")
@@ -3531,7 +3719,7 @@ def ingestFileToString(passed_path):
 #==============
 def isolateStringInFile(passed_path, search_array):
 
-    logging.debug(f"\tPreparing for string isolation in file[ {passed_path} ]")
+    logging.debug(f"\t\tPreparing for string isolation in file[ {passed_path} ]")
 
     ret_strings = []
 
@@ -3551,11 +3739,11 @@ def isolateStringInFile(passed_path, search_array):
                 # Iterate through search_array
                 for search_str in search_array:
                     # Check each line for the search string
-                    if search_string in line:
-                        ret_str.append( line.strip())
+                    if search_str in line:
+                        ret_strings.append(line.strip())
                         break
 
-            logging.debug(f"\tSearching file for search string [ {search_string} ]")
+            logging.debug(f"\t\tSearching file for search string [ {search_str} ]")
 
     except FileNotFoundError:
         logging.exception(f"Error: File was not found [ {file_path} ]")
@@ -3570,7 +3758,7 @@ def isolateStringInFile(passed_path, search_array):
 #==============
 # Grabs system information for the test 
 #==============
-def metaDataGenerator()
+def metaDataGenerator():
     logging.info(f"Gathering test case metadata")
 
     #---------
@@ -3606,6 +3794,11 @@ def metaDataGenerator()
 def updateSummaryCounts(passed_passes, passed_failures, passed_warnings, passed_total_checks):
 
     # Adjust globals
+    global PASSES
+    global FAILURES
+    global WARNINGS
+    global TOTAL_CHECKS
+
     PASSES += passed_passes
     FAILURES += passed_failures
     WARNINGS += passed_warnings
@@ -3626,21 +3819,25 @@ def main():
         prog = script_version,
         description = "Linux System Secure Configuration Evaluation and Remediation",
         formatter_class = argparse.RawDescriptionHelpFormatter,
-        epilog = textwrap.dedent('''
+        #formatter_class = argparse.RawTextHelpFormatter,
+        epilog = textwrap.dedent(f'''
             Examples:
-                Show options associated with db_regen
-                    => python3 %s db_regen -h
+                Show options associated with script
+                    => python3 {script_version} -h
                 
-                Show options associated with db_regen
-                    => python3 %s db_regen -h
-            '''%(script_version, script_version, script_version)))
+                Run full audit suite
+                    => python3 {script_version} audit -f
+                
+                Run selected audit checks (e.g. firewall, kernel/system, services)
+                    => python3 {script_version} audit -s f k s
+            '''))
 
     # Start considering logging
     global verbose_logging
     verbose_logging = False
 
     # Set some 'global' options
-    global_parser = argparse.ArgumentParser(add_help=False)
+    global_parser = argparse.ArgumentParser(add_help=False, formatter_class = argparse.RawTextHelpFormatter)
     global_parser.add_argument("-v", "--verbose", action="store_true", help="Logging output will be verbose")
     global_parser.add_argument('-p', '--print', action='store_true', help='Print results to STDOUT only')
     global_parser.add_argument('-o', '--output', help='Specify audit report path/name')
@@ -3652,7 +3849,7 @@ def main():
     #   subset [Run selected audit checks]
     #========================
     subparsers = parser.add_subparsers(title='Linux System Hardening Options', dest='subcommand')
-
+    
     #-----------
     # info
     #-----------
@@ -3661,26 +3858,16 @@ def main():
     #-----------
     # audit
     #-----------
-    audit_parser = subparsers.add_parser('audit', help = 'Strictly Audit the System Configurations', parents=[global_parser])
+    audit_parser = subparsers.add_parser('audit', help = 'Strictly Audit the System Configurations', parents=[global_parser], formatter_class=argparse.RawTextHelpFormatter)
+
+    # Create the required group
+    audit_req = audit_parser.add_argument_group("required - audit type")
 
     # Can select full OR subset
-    audit_type = audit_parser.add_mutually_exclusive_group(required=True)
+    audit_type = audit_req.add_mutually_exclusive_group(required=True)
 
     # Full Audit
     audit_type.add_argument('-f', '--full', action='store_true', help='Complete all audit checks')
-
-    # Audit Checks Info
-    audit_info = """\
-    Audit Checks Available:
-        a : auto-updates enabled
-        c : credential / password policy
-        f : firewall
-        k : kernel / system
-        l : logging / auditing
-        p : permissions (files)
-        r : remote / SSH
-        s : services
-        u : user-privileges"""
 
     # Subset audit
     audit_type.add_argument(
@@ -3691,8 +3878,20 @@ def main():
         choices=['a', 'c', 'f', 'k', 'l', 'p', 'r', 's', 'u'], 
         # allow multiple options to be selected
         nargs='+', 
-        help=textwrap.dedent(audit_info)
+        #help = '''
+        help = textwrap.dedent('''\
+    Audit Checks Available:
+        a : auto-updates enabled
+        c : credential / password policy
+        f : firewall
+        k : kernel / system
+        l : logging / auditing
+        p : permissions (files)
+        r : remote / SSH
+        s : services
+        u : user-privileges''')
     )
+
 
     #========================
     # Process Passed Arguments
@@ -3710,7 +3909,7 @@ def main():
     global PRINT
 
     # Determine if output to STDOUT is defined
-    PRINT = True if args.print else false
+    PRINT = True if args.print else False
 
     # Determine output name (if defined or generated)
     OUTPUT = args.output if args.output else generateOutputName()
@@ -3741,10 +3940,16 @@ def main():
     # Audit Only
     #-------------
     elif args.subcommand == 'audit':
-        auditChecksFullWrapper()
-        print(f"AUDIT TREE")
 
-if __name__="__main__":
+        if args.full:
+            #print(f"\tFULL")
+            auditChecksFullWrapper()
+        else:
+            #print(f"\tSUBSET")
+            #print(f"\t{args.subset}")
+            auditChecksSubsetWrapper(args.subset)
+
+if __name__ == "__main__":
     main()
 
 
