@@ -1,0 +1,79 @@
+########################################
+# Uncomment the desired test
+########################################
+
+#=======================================
+# General Help command
+#=======================================
+#sudo python3 linuxSecureConfigEvaluation.py -h
+
+#=======================================
+# Info command
+#=======================================
+#sudo python3 linuxSecureConfigEvaluation.py info
+
+#=======================================
+# Audit : Help 
+#=======================================
+#sudo python3 linuxSecureConfigEvaluation.py audit -h
+
+#-------------
+# Audit : Full 
+#-------------
+### Audit Full - Write to output file (name = default)
+#sudo python3 linuxSecureConfigEvaluation.py audit -f 
+
+### Audit Full - Write to output file (name = specified)
+#sudo python3 linuxSecureConfigEvaluation.py audit -f -o Server01_Audit.json
+
+### Audit Full - Write to output file (name = defaul) -- FAIL (no sudo)
+#python3 linuxSecureConfigEvaluation.py audit -f 
+
+#-------------
+# Audit : Subset 
+#--------------------------------------------------------------------------
+### Auto-Updates
+### No Verbose Logging | Output Report to Generated Filename
+#sudo python3 linuxSecureConfigEvaluation.py audit -s a 
+
+### No Verbose Logging | Output to Console Only
+#sudo python3 linuxSecureConfigEvaluation.py audit -s a -p
+
+### Verbose Logging | Output to Console Only
+#sudo python3 linuxSecureConfigEvaluation.py audit -s a -p -v
+
+#--------------------------------------------------------------------------
+### Credential / Password Policy 
+### No Verbose Logging | Output Report to Generated Filename
+#sudo python3 linuxSecureConfigEvaluation.py audit -s c
+
+### Verbose Logging | Output to Generated Filename File
+#sudo python3 linuxSecureConfigEvaluation.py audit -s c -v
+#--------------------------------------------------------------------------
+### Firewall
+#sudo python3 linuxSecureConfigEvaluation.py audit -s f
+
+#--------------------------------------------------------------------------
+### Kernel / Systemctl
+#sudo python3 linuxSecureConfigEvaluation.py audit -s k
+
+#--------------------------------------------------------------------------
+### Logging / Auditing
+#sudo python3 linuxSecureConfigEvaluation.py audit -s l
+
+#--------------------------------------------------------------------------
+### File Permissions
+#sudo python3 linuxSecureConfigEvaluation.py audit -s p
+
+#--------------------------------------------------------------------------
+### Remote / SSH 
+#sudo python3 linuxSecureConfigEvaluation.py audit -s r
+
+#--------------------------------------------------------------------------
+### Services
+#sudo python3 linuxSecureConfigEvaluation.py audit -s s
+
+#--------------------------------------------------------------------------
+### User-Privileges
+#sudo python3 linuxSecureConfigEvaluation.py audit -s u
+

@@ -1,0 +1,1134 @@
+{
+    "scan_metadata": {
+        "hostname": "TestBox01",
+        "os": "Linux-6.19.14+kali-amd64-x86_64-with-glibc2.42",
+        "kernel_version": "#1 SMP PREEMPT_DYNAMIC Kali 6.19.14-1+kali1 (2026-05-05)",
+        "scan_timestamp": "20260603_130152"
+    },
+    "audit_checks": {
+        "auto_update_checks": {
+            "unattended_upgrades": {
+                "expected": "enabled",
+                "actual": "disabled",
+                "status": "FAIL"
+            },
+            "packet_manager_configured": {
+                "expected": "apt",
+                "actual": "apt",
+                "status": "FAIL"
+            },
+            "update_timer_status": {
+                "expected": "active",
+                "actual": "active",
+                "status": "PASS"
+            }
+        },
+        "credential_policy_checks": {
+            "minimum_password_length": {
+                "expected": "enabled/configured",
+                "actual": "enabled/configured",
+                "status": "PASS"
+            },
+            "password_complexity": {
+                "required_character_classes": {
+                    "expected": "enabled/configured",
+                    "actual": "disabled/not configured",
+                    "status": "FAIL"
+                },
+                "required_character_digit": {
+                    "expected": "enabled/configured",
+                    "actual": "disabled/not configured",
+                    "status": "FAIL"
+                },
+                "required_character_lowercase": {
+                    "expected": "enabled/configured",
+                    "actual": "disabled/not configured",
+                    "status": "FAIL"
+                },
+                "required_character_uppercase": {
+                    "expected": "enabled/configured",
+                    "actual": "disabled/not configured",
+                    "status": "FAIL"
+                },
+                "required_character_special": {
+                    "expected": "enabled/configured",
+                    "actual": "disabled/not configured",
+                    "status": "FAIL"
+                }
+            },
+            "password_expiration": {
+                "expected": "enabled/configured",
+                "actual": "enabled/bad configuration [ 99999 > 90 ]",
+                "status": "FAIL"
+            },
+            "password_reuse_prevention": {
+                "expected": "enabled/configured",
+                "actual": "disabled/not configured",
+                "status": "FAIL"
+            },
+            "account_lockout_policy": {
+                "expected": "enabled/configured",
+                "actual": "enabled/configured",
+                "status": "PASS"
+            }
+        },
+        "firewall_checks": {
+            "firewall_enabled": {
+                "expected": "enabled",
+                "actual": "disabled",
+                "status": "FAIL"
+            },
+            "firewall_active": {
+                "expected": "active",
+                "actual": "not installed -- inactive",
+                "status": "FAIL"
+            },
+            "deny_by_default": {
+                "expected": "deny-by-default",
+                "actual": "not installed -- no default present",
+                "status": "FAIL"
+            },
+            "listening_ports": {
+                "expected": "port checks available",
+                "actual": "not installed -- no port checks",
+                "status": "FAIL"
+            },
+            "restricted_ssh": {
+                "expected": "SSH Restrictions Configured",
+                "actual": "not installed -- no ssh restrictions configured",
+                "status": "FAIL"
+            }
+        },
+        "kernel_checks": {
+            "ip_forwarding": {
+                "ipv4_forwarding": {
+                    "expected": "disabled",
+                    "actual": "disabled",
+                    "status": "PASS"
+                },
+                "ipv6_forwarding": {
+                    "expected": "disabled",
+                    "actual": "disabled",
+                    "status": "PASS"
+                }
+            },
+            "icmp_redirects": {
+                "icmp_redirects_accept": {
+                    "expected": "disabled",
+                    "actual": "disabled",
+                    "status": "PASS"
+                },
+                "icmp_redirects_send": {
+                    "expected": "disabled",
+                    "actual": "disabled",
+                    "status": "PASS"
+                },
+                "icmp_redirects_secure": {
+                    "expected": "disabled",
+                    "actual": "disabled",
+                    "status": "PASS"
+                }
+            },
+            "tcp_syn_cookies": {
+                "expected": "disabled",
+                "actual": "disabled",
+                "status": "PASS"
+            },
+            "source_routing": {
+                "expected": "disabled",
+                "actual": "disabled",
+                "status": "PASS"
+            }
+        },
+        "logging_configuration_checks": {
+            "rsyslog_audit": {
+                "service_enabled": {
+                    "expected": "enabled",
+                    "actual": "disabled",
+                    "status": "FAIL"
+                },
+                "service_active": {
+                    "expected": "active",
+                    "actual": "disabled",
+                    "status": "FAIL"
+                }
+            },
+            "auditd_audit": {
+                "service_enabled": {
+                    "expected": "enabled",
+                    "actual": "disabled",
+                    "status": "FAIL"
+                },
+                "service_active": {
+                    "expected": "active",
+                    "actual": "disabled",
+                    "status": "FAIL"
+                }
+            },
+            "journald_audit": {
+                "service_enabled": {
+                    "expected": "enabled",
+                    "actual": "disabled",
+                    "status": "FAIL"
+                },
+                "service_active": {
+                    "expected": "active",
+                    "actual": "disabled",
+                    "status": "FAIL"
+                }
+            },
+            "log_rotation": {
+                "service": "logrotate.service",
+                "enabled": {
+                    "expected": "enabled",
+                    "actual": "enabled",
+                    "status": "PASS"
+                },
+                "active": {
+                    "expected": "active",
+                    "actual": "active",
+                    "status": "PASS"
+                },
+                "configured": {
+                    "expected": "Timers configured",
+                    "actual": "Timers configured",
+                    "status": "PASS"
+                }
+            }
+        },
+        "file_permission_checks": {
+            "world_writable_files": {
+                "expected": "No world-writable files present",
+                "actual": "9208 world-writable files present",
+                "status": "FAIL"
+            },
+            "ssh_permissions": {
+                "~/.ssh": {
+                    "expected": "700",
+                    "actual": "File Not Present",
+                    "status": "PASS"
+                },
+                "~/.ssh/id_rsa": {
+                    "expected": "600",
+                    "actual": "File Not Present",
+                    "status": "PASS"
+                },
+                "~/.ssh/id_rsa.pub": {
+                    "expected": "644",
+                    "actual": "File Not Present",
+                    "status": "PASS"
+                },
+                "~/.ssh/authorized_keys": {
+                    "expected": "600",
+                    "actual": "File Not Present",
+                    "status": "PASS"
+                },
+                "~/.ssh/config": {
+                    "expected": "600",
+                    "actual": "File Not Present",
+                    "status": "PASS"
+                }
+            },
+            "suid_binaries": {
+                "suid_files": {
+                    "expected": "No SUID files present",
+                    "actual": "40 SUID files present",
+                    "status": "FAIL"
+                },
+                "sgid_files": {
+                    "expected": "No SGID files present",
+                    "actual": "15 SUID files present",
+                    "status": "FAIL"
+                }
+            },
+            "sensitive_file_ownerships": {
+                "/etc/passwd": {
+                    "expected": "644",
+                    "actual": "644",
+                    "status": "PASS"
+                },
+                "/etc/shadow": {
+                    "expected": "600",
+                    "actual": "File Not Present",
+                    "status": "PASS"
+                },
+                "/etc/sudoers": {
+                    "expected": "440",
+                    "actual": "440",
+                    "status": "PASS"
+                }
+            }
+        },
+        "ssh_remote_checks": {
+            "root_login_disabled": {
+                "expected": "disabled",
+                "actual": "disabled",
+                "status": "PASS"
+            },
+            "password_authentication_disabled": {
+                "expected": "disabled",
+                "actual": "disabled",
+                "status": "PASS"
+            },
+            "ssh_protocol_version": {
+                "version": "OpenSSH_10.2p1 Debian-6, OpenSSL 3.6.1 27 Jan 2026",
+                "status": "PASS"
+            },
+            "empty_passwords_disabled": {
+                "expected": "disabled",
+                "actual": "disabled",
+                "status": "PASS"
+            },
+            "max_authorization_attempts": {
+                "expected": "<=4",
+                "actual": "6",
+                "status": "FAIL"
+            },
+            "idle_timeout_configured": {
+                "expected": "3004",
+                "actual": "Not configured",
+                "status": "FAIL"
+            },
+            "strong_cipher": {
+                "expected": "Strong ciphers present",
+                "actual": "Strong ciphers present",
+                "status": "PASS",
+                "weak_ciphers_present": "3des-cbc,aes128-cbc,aes192-cbc,aes256-cbc",
+                "recommendation": "Disable weak ciphers"
+            }
+        },
+        "service_configuration_checks": {
+            "active_system_services": {
+                "accounts-daemon": {
+                    "service": "accounts-daemon",
+                    "classification": "unkown",
+                    "risk_level": "WARN",
+                    "status": "WARN",
+                    "recommended": "unknown",
+                    "recommendation": "Review necessity and exposure"
+                },
+                "bolt": {
+                    "service": "bolt",
+                    "classification": "unkown",
+                    "risk_level": "WARN",
+                    "status": "WARN",
+                    "recommended": "unknown",
+                    "recommendation": "Review necessity and exposure"
+                },
+                "colord": {
+                    "service": "colord",
+                    "classification": "unkown",
+                    "risk_level": "WARN",
+                    "status": "WARN",
+                    "recommended": "unknown",
+                    "recommendation": "Review necessity and exposure"
+                },
+                "cron": {
+                    "classification": "Infrastructure",
+                    "risk": "LOW",
+                    "recommended": "Yes",
+                    "status_if_running": "INFO",
+                    "recommendation": "Review scheduled tasks for unauthorized entries"
+                },
+                "dbus": {
+                    "service": "dbus",
+                    "classification": "unkown",
+                    "risk_level": "WARN",
+                    "status": "WARN",
+                    "recommended": "unknown",
+                    "recommendation": "Review necessity and exposure"
+                },
+                "fwupd": {
+                    "service": "fwupd",
+                    "classification": "unkown",
+                    "risk_level": "WARN",
+                    "status": "WARN",
+                    "recommended": "unknown",
+                    "recommendation": "Review necessity and exposure"
+                },
+                "gdm": {
+                    "service": "gdm",
+                    "classification": "unkown",
+                    "risk_level": "WARN",
+                    "status": "WARN",
+                    "recommended": "unknown",
+                    "recommendation": "Review necessity and exposure"
+                },
+                "haveged": {
+                    "service": "haveged",
+                    "classification": "unkown",
+                    "risk_level": "WARN",
+                    "status": "WARN",
+                    "recommended": "unknown",
+                    "recommendation": "Review necessity and exposure"
+                },
+                "ModemManager": {
+                    "service": "ModemManager",
+                    "classification": "unkown",
+                    "risk_level": "WARN",
+                    "status": "WARN",
+                    "recommended": "unknown",
+                    "recommendation": "Review necessity and exposure"
+                },
+                "NetworkManager": {
+                    "service": "NetworkManager",
+                    "classification": "unkown",
+                    "risk_level": "WARN",
+                    "status": "WARN",
+                    "recommended": "unknown",
+                    "recommendation": "Review necessity and exposure"
+                },
+                "pcscd": {
+                    "service": "pcscd",
+                    "classification": "unkown",
+                    "risk_level": "WARN",
+                    "status": "WARN",
+                    "recommended": "unknown",
+                    "recommendation": "Review necessity and exposure"
+                },
+                "polkit": {
+                    "service": "polkit",
+                    "classification": "unkown",
+                    "risk_level": "WARN",
+                    "status": "WARN",
+                    "recommended": "unknown",
+                    "recommendation": "Review necessity and exposure"
+                },
+                "power-profiles-daemon": {
+                    "service": "power-profiles-daemon",
+                    "classification": "unkown",
+                    "risk_level": "WARN",
+                    "status": "WARN",
+                    "recommended": "unknown",
+                    "recommendation": "Review necessity and exposure"
+                },
+                "rtkit-daemon": {
+                    "service": "rtkit-daemon",
+                    "classification": "unkown",
+                    "risk_level": "WARN",
+                    "status": "WARN",
+                    "recommended": "unknown",
+                    "recommendation": "Review necessity and exposure"
+                },
+                "smartmontools": {
+                    "service": "smartmontools",
+                    "classification": "unkown",
+                    "risk_level": "WARN",
+                    "status": "WARN",
+                    "recommended": "unknown",
+                    "recommendation": "Review necessity and exposure"
+                },
+                "systemd-journald": {
+                    "classification": "Essential",
+                    "risk": "LOW",
+                    "recommended": "Yes",
+                    "status_if_running": "PASS",
+                    "recommendation": "Ensure persistent logging is enabled"
+                },
+                "systemd-logind": {
+                    "service": "systemd-logind",
+                    "classification": "unkown",
+                    "risk_level": "WARN",
+                    "status": "WARN",
+                    "recommended": "unknown",
+                    "recommendation": "Review necessity and exposure"
+                },
+                "systemd-udevd": {
+                    "service": "systemd-udevd",
+                    "classification": "unkown",
+                    "risk_level": "WARN",
+                    "status": "WARN",
+                    "recommended": "unknown",
+                    "recommendation": "Review necessity and exposure"
+                },
+                "udisks2": {
+                    "service": "udisks2",
+                    "classification": "unkown",
+                    "risk_level": "WARN",
+                    "status": "WARN",
+                    "recommended": "unknown",
+                    "recommendation": "Review necessity and exposure"
+                },
+                "upower": {
+                    "service": "upower",
+                    "classification": "unkown",
+                    "risk_level": "WARN",
+                    "status": "WARN",
+                    "recommended": "unknown",
+                    "recommendation": "Review necessity and exposure"
+                },
+                "user@1000": {
+                    "service": "user@1000",
+                    "classification": "unkown",
+                    "risk_level": "WARN",
+                    "status": "WARN",
+                    "recommended": "unknown",
+                    "recommendation": "Review necessity and exposure"
+                },
+                "wpa_supplicant": {
+                    "service": "wpa_supplicant",
+                    "classification": "unkown",
+                    "risk_level": "WARN",
+                    "status": "WARN",
+                    "recommended": "unknown",
+                    "recommendation": "Review necessity and exposure"
+                }
+            },
+            "exposed_network_services": {
+                "expected": "port checks available",
+                "actual": "not installed -- no port checks",
+                "status": "FAIL"
+            }
+        },
+        "user_privileges_check": {
+            "uid_0_accounts": {
+                "expected": "none",
+                "actual": "root",
+                "status": "WARN"
+            },
+            "sudo_users": {
+                "expected": "none",
+                "actual": "kleenex65",
+                "status": "WARN"
+            },
+            "accounts_present": {
+                "user_accounts": {
+                    "root": {
+                        "UID": "0",
+                        "GID": "0",
+                        "Home_dir": "/root",
+                        "Comments": "root",
+                        "Account_Type": "root",
+                        "Last_password_change": "May 08, 2026",
+                        "Account_expiration": "never",
+                        "Password_expiration": "Feb 20, 2300",
+                        "Password_status": "active",
+                        "Last_login": "Unable to determine"
+                    },
+                    "nobody": {
+                        "UID": "65534",
+                        "GID": "65534",
+                        "Home_dir": "/nonexistent",
+                        "Comments": "nobody",
+                        "Account_Type": "user",
+                        "Last_password_change": "Nov 18, 2024",
+                        "Account_expiration": "never",
+                        "Password_expiration": "Sep 02, 2298",
+                        "Password_status": "locked",
+                        "Last_login": "Unable to determine"
+                    },
+                    "kleenex65": {
+                        "UID": "1000",
+                        "GID": "1000",
+                        "Home_dir": "/home/kleenex65",
+                        "Comments": "kleenex65,,,",
+                        "Account_Type": "user",
+                        "Last_password_change": "Nov 18, 2024",
+                        "Account_expiration": "never",
+                        "Password_expiration": "Sep 02, 2298",
+                        "Password_status": "active",
+                        "Last_login": "Jun02/09:56"
+                    }
+                },
+                "system_accounts": {
+                    "daemon": {
+                        "UID": "1",
+                        "GID": "1",
+                        "Home_dir": "/usr/sbin",
+                        "Comments": "daemon",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "bin": {
+                        "UID": "2",
+                        "GID": "2",
+                        "Home_dir": "/bin",
+                        "Comments": "bin",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "sys": {
+                        "UID": "3",
+                        "GID": "3",
+                        "Home_dir": "/dev",
+                        "Comments": "sys",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "sync": {
+                        "UID": "4",
+                        "GID": "65534",
+                        "Home_dir": "/bin",
+                        "Comments": "sync",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Iteractive Shell [ /bin/sync ]",
+                        "Shell_Status": "FAIL"
+                    },
+                    "games": {
+                        "UID": "5",
+                        "GID": "60",
+                        "Home_dir": "/usr/games",
+                        "Comments": "games",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "man": {
+                        "UID": "6",
+                        "GID": "12",
+                        "Home_dir": "/var/cache/man",
+                        "Comments": "man",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "lp": {
+                        "UID": "7",
+                        "GID": "7",
+                        "Home_dir": "/var/spool/lpd",
+                        "Comments": "lp",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "mail": {
+                        "UID": "8",
+                        "GID": "8",
+                        "Home_dir": "/var/mail",
+                        "Comments": "mail",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "news": {
+                        "UID": "9",
+                        "GID": "9",
+                        "Home_dir": "/var/spool/news",
+                        "Comments": "news",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "uucp": {
+                        "UID": "10",
+                        "GID": "10",
+                        "Home_dir": "/var/spool/uucp",
+                        "Comments": "uucp",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "proxy": {
+                        "UID": "13",
+                        "GID": "13",
+                        "Home_dir": "/bin",
+                        "Comments": "proxy",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "www-data": {
+                        "UID": "33",
+                        "GID": "33",
+                        "Home_dir": "/var/www",
+                        "Comments": "www-data",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "backup": {
+                        "UID": "34",
+                        "GID": "34",
+                        "Home_dir": "/var/backups",
+                        "Comments": "backup",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "list": {
+                        "UID": "38",
+                        "GID": "38",
+                        "Home_dir": "/var/list",
+                        "Comments": "Mailing List Manager",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "irc": {
+                        "UID": "39",
+                        "GID": "39",
+                        "Home_dir": "/run/ircd",
+                        "Comments": "ircd",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "_apt": {
+                        "UID": "42",
+                        "GID": "65534",
+                        "Home_dir": "/nonexistent",
+                        "Comments": "",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "systemd-network": {
+                        "UID": "998",
+                        "GID": "998",
+                        "Home_dir": "/",
+                        "Comments": "systemd Network Management",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "_galera": {
+                        "UID": "100",
+                        "GID": "65534",
+                        "Home_dir": "/nonexistent",
+                        "Comments": "",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "mysql": {
+                        "UID": "101",
+                        "GID": "102",
+                        "Home_dir": "/nonexistent",
+                        "Comments": "MariaDB Server,,,",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "tss": {
+                        "UID": "102",
+                        "GID": "103",
+                        "Home_dir": "/var/lib/tpm",
+                        "Comments": "TPM software stack,,,",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "strongswan": {
+                        "UID": "103",
+                        "GID": "65534",
+                        "Home_dir": "/var/lib/strongswan",
+                        "Comments": "",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "systemd-timesync": {
+                        "UID": "992",
+                        "GID": "992",
+                        "Home_dir": "/",
+                        "Comments": "systemd Time Synchronization",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "rwhod": {
+                        "UID": "104",
+                        "GID": "65534",
+                        "Home_dir": "/var/spool/rwho",
+                        "Comments": "",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "_gophish": {
+                        "UID": "105",
+                        "GID": "106",
+                        "Home_dir": "/var/lib/gophish",
+                        "Comments": "",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "iodine": {
+                        "UID": "106",
+                        "GID": "65534",
+                        "Home_dir": "/run/iodine",
+                        "Comments": "",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "messagebus": {
+                        "UID": "107",
+                        "GID": "107",
+                        "Home_dir": "/nonexistent",
+                        "Comments": "",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "tcpdump": {
+                        "UID": "108",
+                        "GID": "108",
+                        "Home_dir": "/nonexistent",
+                        "Comments": "",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "miredo": {
+                        "UID": "109",
+                        "GID": "65534",
+                        "Home_dir": "/var/run/miredo",
+                        "Comments": "",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "_rpc": {
+                        "UID": "110",
+                        "GID": "65534",
+                        "Home_dir": "/run/rpcbind",
+                        "Comments": "",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "Debian-snmp": {
+                        "UID": "111",
+                        "GID": "110",
+                        "Home_dir": "/var/lib/snmp",
+                        "Comments": "",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "redis": {
+                        "UID": "112",
+                        "GID": "112",
+                        "Home_dir": "/var/lib/redis",
+                        "Comments": "",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "usbmux": {
+                        "UID": "113",
+                        "GID": "46",
+                        "Home_dir": "/var/lib/usbmux",
+                        "Comments": "usbmux daemon,,,",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "mosquitto": {
+                        "UID": "114",
+                        "GID": "115",
+                        "Home_dir": "/var/lib/mosquitto",
+                        "Comments": "",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "redsocks": {
+                        "UID": "115",
+                        "GID": "116",
+                        "Home_dir": "/var/run/redsocks",
+                        "Comments": "",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "stunnel4": {
+                        "UID": "991",
+                        "GID": "991",
+                        "Home_dir": "/var/run/stunnel4",
+                        "Comments": "stunnel service system account",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "sshd": {
+                        "UID": "116",
+                        "GID": "65534",
+                        "Home_dir": "/run/sshd",
+                        "Comments": "",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "dnsmasq": {
+                        "UID": "999",
+                        "GID": "65534",
+                        "Home_dir": "/var/lib/misc",
+                        "Comments": "dnsmasq",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "sslh": {
+                        "UID": "117",
+                        "GID": "118",
+                        "Home_dir": "/nonexistent",
+                        "Comments": "",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "postgres": {
+                        "UID": "118",
+                        "GID": "119",
+                        "Home_dir": "/var/lib/postgresql",
+                        "Comments": "PostgreSQL administrator,,,",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Iteractive Shell [ /bin/bash ]",
+                        "Shell_Status": "FAIL"
+                    },
+                    "avahi": {
+                        "UID": "119",
+                        "GID": "120",
+                        "Home_dir": "/run/avahi-daemon",
+                        "Comments": "Avahi mDNS daemon,,,",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "_gvm": {
+                        "UID": "120",
+                        "GID": "122",
+                        "Home_dir": "/var/lib/openvas",
+                        "Comments": "",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "speech-dispatcher": {
+                        "UID": "121",
+                        "GID": "29",
+                        "Home_dir": "/run/speech-dispatcher",
+                        "Comments": "Speech Dispatcher,,,",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "fwupd-refresh": {
+                        "UID": "990",
+                        "GID": "990",
+                        "Home_dir": "/var/lib/fwupd",
+                        "Comments": "Firmware update daemon",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "inetsim": {
+                        "UID": "122",
+                        "GID": "124",
+                        "Home_dir": "/var/lib/inetsim",
+                        "Comments": "",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "geoclue": {
+                        "UID": "123",
+                        "GID": "125",
+                        "Home_dir": "/var/lib/geoclue",
+                        "Comments": "",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "lightdm": {
+                        "UID": "124",
+                        "GID": "126",
+                        "Home_dir": "/var/lib/lightdm",
+                        "Comments": "Light Display Manager",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "gnome-remote-desktop": {
+                        "UID": "988",
+                        "GID": "988",
+                        "Home_dir": "/var/lib/gnome-remote-desktop",
+                        "Comments": "GNOME Remote Desktop",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "statd": {
+                        "UID": "125",
+                        "GID": "65534",
+                        "Home_dir": "/var/lib/nfs",
+                        "Comments": "",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "saned": {
+                        "UID": "126",
+                        "GID": "128",
+                        "Home_dir": "/var/lib/saned",
+                        "Comments": "",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "polkitd": {
+                        "UID": "987",
+                        "GID": "987",
+                        "Home_dir": "/",
+                        "Comments": "User for polkitd",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "rtkit": {
+                        "UID": "127",
+                        "GID": "129",
+                        "Home_dir": "/proc",
+                        "Comments": "RealtimeKit,,,",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "colord": {
+                        "UID": "128",
+                        "GID": "130",
+                        "Home_dir": "/var/lib/colord",
+                        "Comments": "colord colour management daemon,,,",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "Debian-gdm": {
+                        "UID": "129",
+                        "GID": "131",
+                        "Home_dir": "/var/lib/gdm3",
+                        "Comments": "Gnome Display Manager",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "nm-openvpn": {
+                        "UID": "130",
+                        "GID": "132",
+                        "Home_dir": "/var/lib/openvpn/chroot",
+                        "Comments": "NetworkManager OpenVPN,,,",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "nm-openconnect": {
+                        "UID": "131",
+                        "GID": "133",
+                        "Home_dir": "/var/lib/NetworkManager",
+                        "Comments": "NetworkManager OpenConnect plugin,,,",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "cups-pk-helper": {
+                        "UID": "132",
+                        "GID": "136",
+                        "Home_dir": "/nonexistent",
+                        "Comments": "user for cups-pk-helper service,,,",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "ntpsec": {
+                        "UID": "133",
+                        "GID": "138",
+                        "Home_dir": "/nonexistent",
+                        "Comments": "",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "pcscd": {
+                        "UID": "984",
+                        "GID": "984",
+                        "Home_dir": "/",
+                        "Comments": "PC/SC Smart Card Daemon",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    },
+                    "_bloodhound": {
+                        "UID": "134",
+                        "GID": "139",
+                        "Home_dir": "/var/lib/bloodhound",
+                        "Comments": "",
+                        "Account_Type": "system",
+                        "Pasword_Status": "locked",
+                        "Shell_Type": "Non-Iteractive Shell",
+                        "Shell_Status": "PASS"
+                    }
+                }
+            }
+        }
+    },
+    "audit_summary": {
+        "Total_Checks": 103,
+        "Total_Pass": 22,
+        "Total_Fail": 37,
+        "Total_Warn": 44
+    }
+}

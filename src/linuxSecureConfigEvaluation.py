@@ -95,13 +95,13 @@ def generateOutputName():
         try:
             with open(uid_path, "r") as file:
                 system_identifier = file.read().strip()
-            logging.debug(f"\tDetermining System UID [ {system_identifier} ]")
+            #logging.debug(f"\tDetermining System UID [ {system_identifier} ]")
         except FileNotFoundError:
             logging.exception(f"Error: File was not found [ {uid_path} ]")
         except PermissionError:
             logging.exception(f"Error: Permissions error for uid file [ {uid_path} ]")
         except Exception as e:
-            logging.exception(f"Unexpected error while reading uid file [ {e} ]")
+            logging.exception(f"Unexpected error [ {e} ]")
 
         # Add the UID to the base name
         output_name_to_ret = f"{output_name_to_ret}_{system_identifier}.json"
@@ -110,7 +110,8 @@ def generateOutputName():
     else:
         output_name_to_ret = f"{output_name_to_ret}.json"
 
-    logging.debug(f"\t\tOutput File Name Determined [ {output_name_to_ret} ]")
+    basename= os.path.basename(output_name_to_ret)
+    logging.debug(f"\t\tOutput File Name Determined [ {basename} ]")
 
     return output_name_to_ret 
 
@@ -223,7 +224,7 @@ def autoUpdateTimerStatus():
     # Check if timer is active
     if subprocess.check_output(["systemctl", "is-active", sys_timer], text=True).strip():
         timer_activity = "active"
-        status = "PASSED"
+        status = "PASS"
 
         # Update globals
         updateSummaryCounts(1, 0, 0, 1)
@@ -267,7 +268,7 @@ def credentialMinLen():
         updateSummaryCounts(0, 1, 0, 1)
         failure_dict = {
             "audit_check" : "Credential Minimum Length",
-            "audit_check_status" : "FAIL" 
+            "status" : "FAIL" 
         }
         return failure_dict
 
@@ -335,7 +336,7 @@ def credentialComplexity():
         updateSummaryCounts(0, len(search_strings), 0, len(search_strings))
         failure_dict = {
             "audit_check" : "Credential Complexity",
-            "audit_check_status" : "FAIL" 
+            "status" : "FAIL" 
         }
         return failure_dict
 
@@ -533,52 +534,56 @@ def credentialComplexity():
 def credentialExpiration():
     logging.debug(f"\tWorking on [ Credentials : Expiration ]")
 
-    # Define path to conf file
+    #------------------
+    # Define paths / strings / variables
+    #------------------
     expire_path = "/etc/login.defs"
-    search_strings = ["PASS_MAX_DAYS"]
-
-    # Search the file for the string
-    found_strings = isolateStringInFile(expire_path, search_strings)
-
-    # Ensure something was returned
-    if len(search_strings) != len(found_strings):
-        logging.error(f"\t\tFailed to isolate password expiration configurations [ {expire_path} ]")
-
-        # Update globals
-        updateSummaryCounts(0, len(search_strings), 0, len(search_strings))
-        failure_dict = {
-            "audit_check" : "Credential Expiration",
-            "audit_check_status" : "FAIL" 
-        }
-        return failure_dict
-
-    # Determine check status
-    expire_days = 90
-    found_expire_days = found_strings[0]
+    search_pass_max = "^#? ?PASS_MAX_DAYS"
+    search_cmd = ['grep', '-E', search_pass_max, expire_path]
 
     expected_expire = "enabled/configured"
     actual_expire = "enabled/configured"
     status_expire = "PASS"
+    expire_days = 90
 
-    # First check: if it's commented out
-    if found_expire_days.startswith('#'):
-        # Update globals
-        updateSummaryCounts(0, 1, 0, 1)
-        actual_expire = "disabled/not configured"
-        status_expire = "FAIL"
+    #------------------
+    # Search the file for the string
+    #------------------
+    try:
+        passmax_output = subprocess.run(search_cmd, capture_output=True, text=True)
+        
+        # Make sure string exists in file
+        if passmax_output.returncode == 0:
+            # Clean up the value
+            passmax_grep = passmax_output.stdout.strip() 
 
-    else:
-        setting_expire = int(found_expire_days.replace("PASS_MAX_DAYS","").strip())
+            # Determine if it is commented out or not (enabled vs. disabled)
+            if passmax_grep.startswith('#'):
+                updateSummaryCounts(0, 1, 0, 1)
+                actual_expire = "disabled/not configured"
+                status_expire = "FAIL" 
 
-        if setting_expire <= expire_days:
-            # Update globals - success
-            updateSummaryCounts(1, 0, 0, 1)
+            else:
+                # Implies setting is 'enabled'
+                passmax = int(passmax_grep.replace("PASS_MAX_DAYS","").strip())
+
+                # Check configuration
+                if passmax > expire_days:
+                    updateSummaryCounts(0, 1, 0, 1)
+                    actual_expire = f"enabled/bad configuration [ {passmax} > {expire_days} ]"
+                    status_expire = "FAIL" 
+                else:
+                    updateSummaryCounts(1, 0, 0, 1)
+                    actual_expire = f"enabled/configured"
+                    status_expire = "PASS" 
+
         else:
-            # Update globals
             updateSummaryCounts(0, 1, 0, 1)
-            actual_expire = f"enabled/not properly configured [ {setting_expire} days ]"
-            status_expire = "FAIL"
+            actual_expire = "disabled/not configured"
+            status_expire = "FAIL" 
 
+    except Exception as e:
+        logging.exception(f"Unexpected error [ {e} ]")
 
     # Put it all together in a dictionary
     password_expiration_dict = {
@@ -597,61 +602,60 @@ def credentialExpiration():
 def credentialReusePrevention():
     logging.debug(f"\tWorking on [ Credentials : Password Reuse Prevention ]")
 
-    #=======
-    # Define search parameters
-    #=======
+    #------------------
+    # Define paths / strings / variables
+    #------------------
     # Set path based on operating system
     if OS_UD:
-        path = "/etc/pam.d/common-password"
+        reuse_path = "/etc/pam.d/common-password"
     elif OS_RC:
-        path = "/etc/pam.d/system-auth"
+        reuse_path = "/etc/pam.d/system-auth"
 
-    search_string = ["remember="]
-
-    #=======
-    # Search for string(s) in specified file
-    #=======
-    found_strings = isolateStringInFile(path, search_string)
-
-    # Ensure something was returned
-    if len(search_string) != len(found_strings):
-        logging.error(f"\t\tFailed to isolate password reuse configurations [ {path} ]")
-
-        # Update globals
-        updateSummaryCounts(0, len(search_string), 0, len(search_string))
-
-        failure_dict = {
-            "audit_check" : "Credential Reuse",
-            "audit_check_status" : "FAIL" 
-        }
-        return failure_dict
-
-    reuse_num = 5
-    found_reuse = found_strings[0]
+    search_reuse = "^#?remember="
+    search_cmd = ['grep', '-E', search_reuse, reuse_path]
 
     expected_reuse = "enabled/configured"
     actual_reuse = "enabled/configured"
     status_reuse = "PASS"
+    reuse_num = 5
 
-    # Make sure it isn't commented out
-    if found_reuse.startswith('#'): 
-        # Update globals 
-        updateSummaryCounts(0, 1, 0, 1)
-        actual_expire = "disabled/not configured"
-        status_expire = "FAIL"
+    #------------------
+    # Run the search
+    #------------------
+    try:
+        reuse_output = subprocess.run(search_cmd, capture_output=True, text=True)
+        
+        # Make sure string exists in file
+        if reuse_output.returncode == 0:
+            # Clean up the value
+            reuse_grep = passmax_output.stdout.strip() 
 
-    else:
-        setting_reuse = int(found_reuse.replace("remember=","").strip())
+            # Determine if it is commented out or not (enabled vs. disabled)
+            if reuse_grep.startswith('#'):
+                updateSummaryCounts(0, 1, 0, 1)
+                actual_reuse = "disabled/not configured"
+                status_reuse = "FAIL" 
+            else:
+                # Implies setting is 'enabled'
+                reuse = int(reuse_grep.replace("remember=","").strip())
 
-        if setting_reuse >= reuse_num:
-            # Update globals - success
-            updateSummaryCounts(1, 0, 0, 1)
+                # Check configuration
+                if reuse > reuse_num:
+                    updateSummaryCounts(0, 1, 0, 1)
+                    actual_reuse = f"enabled/bad configuration [ {reuse} > {reuse_num} ]"
+                    status_reuse = "FAIL" 
+                else:
+                    updateSummaryCounts(1, 0, 0, 1)
+                    actual_reuse = f"enabled/configured"
+                    status_reuse = "PASS" 
+
         else:
-            # Update globals
             updateSummaryCounts(0, 1, 0, 1)
-            actual_reuse = f"enabled/not properly configured"
+            actual_reuse = "disabled/not configured"
             status_reuse = "FAIL"
 
+    except Exception as e:
+        logging.exception(f"Unexpected error [ {e} ]")
 
     # Put it all together in a dictionary
     password_reuse_dict = {
@@ -672,58 +676,56 @@ def credentialReusePrevention():
 def credentialLockout():
     logging.debug(f"\tWorking on [ Credentials : Account Lockout Policy ]")
 
-    #=======
-    # Define search parameters
-    #=======
-    # Set path based on operating system
-    path = "/etc/security/faillock.conf"
-
-    search_string = ["deny"]
-
-    #=======
-    # Search for string(s) in specified file
-    #=======
-    found_strings = isolateStringInFile(path, search_string)
-
-    # Ensure something was returned
-    if len(search_string) != len(found_strings):
-        logging.error(f"\t\tFailed to isolate password lockout configurations [ {path} ]")
-
-        # Update globals
-        updateSummaryCounts(0, len(search_string), 0, len(search_string))
-
-        failure_dict = {
-            "audit_check" : "Credential Lockout", 
-            "audit_check_status" : "FAIL" 
-        }
-        return failure_dict
-
-    lockout_num = 3
-    found_lockout = found_strings[0]
+    #------------------
+    # Define paths / strings / variables
+    #------------------
+    deny_path = "/etc/security/faillock.conf"
+    search_deny = "^#? ?deny"
+    search_cmd = ['grep', '-E', search_deny, deny_path]
 
     expected_lockout = "enabled/configured"
     actual_lockout = "enabled/configured"
     status_lockout = "PASS"
+    lockout_num = 3
 
-    # Make sure it isn't commented out
-    if found_lockout.startswith('#'):
-        # Update globals
-        updateSummaryCounts(0, 1, 0, 1)
-        actual_lockout = "disabled/not configured"
-        status_lockout = "FAIL"
+    #------------------
+    # Search for string(s) in specified file
+    #------------------
+    try:
+        lockout_output = subprocess.run(search_cmd, capture_output=True, text=True)
+        
+        # Make sure string exists in file
+        if lockout_output.returncode == 0:
+            # Clean up the value
+            lockout_grep = lockout_output.stdout.strip() 
 
-    else:
-        setting_lockout = int(found_lockout.replace("deny = ","").strip())
+            # Determine if it is commented out or not (enabled vs. disabled)
+            if lockout_grep.startswith('#'):
+                updateSummaryCounts(0, 1, 0, 1)
+                actual_expire = "disabled/not configured"
+                status_expire = "FAIL" 
 
-        if setting_lockout >= lockout_num:
-            # Update globals - success
-            updateSummaryCounts(1, 0, 0, 1)
+            else:
+                # Implies setting is 'enabled'
+                lockout = int(lockout_grep.replace("deny =","").strip())
+
+                # Check configuration
+                if lockout > lockout_num:
+                    updateSummaryCounts(0, 1, 0, 1)
+                    actual_expire = f"enabled/bad configuration [ {lockout} > {lockout_num} ]"
+                    status_expire = "FAIL" 
+                else:
+                    updateSummaryCounts(1, 0, 0, 1)
+                    actual_expire = f"enabled/configured"
+                    status_expire = "PASS" 
+
         else:
-            # Update globals
             updateSummaryCounts(0, 1, 0, 1)
-            actual_lockout = f"enabled/not properly configured"
-            status_lockout = "FAIL"
+            actual_expire = "disabled/not configured"
+            status_expire = "FAIL" 
 
+    except Exception as e:
+        logging.exception(f"Unexpected error [ {e} ]")
 
     # Put it all together in a dictionary
     password_lockout_dict = {
@@ -1480,11 +1482,11 @@ def firewallSSHRestricted(fw_enabled):
         firewall_fail = {
             'expected' : "SSH Restrictions Configured",
             'actual' : "not installed -- no ssh restrictions configured",
-            'expected' : "FAIL"
+            'status' : "FAIL"
         }
 
         # Update global
-        updateSummaryCounts(0, 1, 0, 4)
+        updateSummaryCounts(0, 4, 0, 4)
         return firewall_fail
 
     # Create final reporting distionary
@@ -2101,7 +2103,7 @@ def remoteRootLoginDisabled():
             root_log_enabled_status = "FAIL"
 
     except Exception as e:
-        logging.exception(f"Unexpected error while searching sshd_config file [ {e} ]")
+        logging.exception(f"Unexpected error [ {e} ]")
 
     #------------------
     # Create final dictionary for return
@@ -2175,7 +2177,7 @@ def remotePasswordAuthDisabled():
             pass_auth_enabled_status = "FAIL"
 
     except Exception as e:
-        logging.exception(f"Unexpected error while searching sshd_config file [ {e} ]")
+        logging.exception(f"Unexpected error [ {e} ]")
 
     #------------------
     # Create final dictionary for return
@@ -2290,7 +2292,7 @@ def remoteEmptyPasswordsDisabled():
             empty_pass_enabled_status = "FAIL"
 
     except Exception as e:
-        logging.exception(f"Unexpected error while searching sshd_config file [ {e} ]")
+        logging.exception(f"Unexpected error [ {e} ]")
 
     #------------------
     # Create final dictionary for return
@@ -2371,7 +2373,7 @@ def remoteMaxAuthAttempts():
             max_auth_enabled_status = "FAIL"
 
     except Exception as e:
-        logging.exception(f"Unexpected error while searching sshd_config file [ {e} ]")
+        logging.exception(f"Unexpected error [ {e} ]")
 
     #------------------
     # Create final dictionary for return
@@ -2453,7 +2455,7 @@ def remoteIdleTimeoutConfigured():
             client_alive_enabled_status = "FAIL"
 
     except Exception as e:
-        logging.exception(f"Unexpected error while searching sshd_config file [ {e} ]")
+        logging.exception(f"Unexpected error [ {e} ]")
 
     #------------------
     # Create final dictionary for return
@@ -2508,7 +2510,7 @@ def remoteStrongCipher():
                 weak_ciphers.append(cipher)
 
     except Exception as e:
-        logging.exception(f"Unexpected error while searching sshd_config file [ {e} ]")
+        logging.exception(f"Unexpected error [ {e} ]")
 
     #==================
     # Create dictionary for return
@@ -2543,27 +2545,34 @@ def servicesGatherSystemServices():
     logging.debug(f"\tRetrieving current system services")
 
     # Grab / Process the services on system
-    services_cmd = ["systemctl", "list-units", "--type=service", "--state=running"]
     system_services = []
+    services_cmd = ["systemctl", "list-units", "--type=service", "--state=running"]
 
     # Run the command, gather output, process
     try:
         services_output = subprocess.run(services_cmd, capture_output=True, text=True)
-        serv_out_split = services_output.stdout.strip().split('\n')
+        # Check return code for success
+        if services_output.returncode == 0:
+            serv_out_split = services_output.stdout.strip().split('\n')
 
-        # Process the output into dictionaries (skip the table header line and last 4 info lines)
-        for line in serv_out_split[1:-5]:
+            # Process the output into dictionaries (skip the table header line and last 4 info lines)
+            for line in serv_out_split[1:-5]:
+                # Isolate the columns
+                columns = line.split()
+                if len(columns) > 1:
+                    service = {
+                        "Unit": columns[0].replace('.service',''),
+                        "Load": columns[1],
+                        "Active": columns[2],
+                        "Sub": columns[3],
+                        "Description": ' '.join(columns[4:]),
+                        "status": "WARN" 
+                    }
+                    system_services.append(service)
+                    updateSummaryCounts(0, 0, 1, 1)
 
-            columns = line.split()
-            # Make sure we have the proper number of columns (expecting 5)
-            if len(columns) == 5:
-                system_services.append({
-                    "Unit": columns[0],
-                    "Load": columns[1],
-                    "Active": columns[2],
-                    "Sub": columns[3],
-                    "Description": columns[4],
-                })
+        else:
+            logging.error("Failed to gather system services")
 
     except Exception as e:
         logging.exception(f"Failed to retreive system services [ {e} ]")
@@ -2586,6 +2595,11 @@ def systemServicesAudit():
     # Gather current system services
     #=============
     service_array = servicesGatherSystemServices()
+    
+    # Make sure we get something back
+    if len(service_array) == 0:
+        logging.error("Failed to audit system services")
+        return service_minimization
 
     #=============
     # Grab already defined services
@@ -2609,10 +2623,12 @@ def systemServicesAudit():
                 "service": service['Unit'],
                 "classification": "unkown",
                 "risk_level": "WARN",
+                "status": "WARN",
                 "recommended": "unknown",
                 "recommendation": "Review necessity and exposure"
             }
 
+            updateSummaryCounts(0, 0, 1, 1)
             service_minimization[service_name] = temp_unk 
     
     # Return dictionary
@@ -3281,9 +3297,6 @@ def checkServices():
     #---
     # Run the checks
     #---
-    #unneccessary_serv_checks = servicesUnnecessary()
-    #legacy_protocol_checks = servicesLegacyProtocols()
-    #exposed_net_serv_checks = servicesExposedNetworkServices()
     sys_serv_checks = systemServicesAudit()
 
     # Add fw enabled check
@@ -3346,7 +3359,32 @@ def checkUserPrivileges():
 #   Will also indicate if particular checks can be remediated
 #==============
 def outputAuditCheckInformation():
-    logging.info(f"Audit Check Information")
+
+    information_string ="""\
+
+Script General: Python-based Linux security auditing toolkit
+Script Purpose: Identify insecure system configurations and 
+                validate common hardening controls
+Script Restrictions: Must be run on Linux Systems
+
+Audit Checks Available [audit -s <option>]:
+    - Remote / SSH Hardening Checks <r>
+    - Firewall Validation <f>
+    - Logging & Auditing <l>
+    - User & Privilege Auditing <u>
+    - Sysctl / Kernel Hardening <k>
+    - Automatic Updates <a>
+    - Credential Policy Auditing <c>
+    - Sensitive File Permisions <p>
+    - Service Minimization <s>
+
+Output Available:
+    - JSON Report
+    - Console Output
+    """
+
+    # Output the string
+    print(information_string)
 
 #==============
 # Wrapper for Subset Audit Checks
@@ -3372,47 +3410,38 @@ def auditChecksSubsetWrapper(subset):
         match check:
             case "a":
                 # Auto-Update Checks
-                #print("Auto-Update Checks")
                 auto_update_dict = checkAutoUpdates()
                 audit_checks["auto_update_checks"] = auto_update_dict 
             case "c":
-                #print("Credential / Password Policy Checks")
                 # Credential / Password Policy Checks
                 cred_dict = checkCredentialPassword()
                 audit_checks["credential_policy_checks"] = cred_dict 
             case "f":
                 # Firewall Checks
-                #print("Firewall Checks")
                 firewall_dict = checkFirewall()
                 audit_checks["firewall_checks"] = firewall_dict 
             case "k":
                 # Kernel / System Checks
-                #print("Kernel / System Checks")
                 kernel_dict = checkKernelSystem()
                 audit_checks["kernel_checks"] = kernel_dict 
             case "l":
                 # Logging Checks
-                #print("Logging Checks")
                 logging_dict = checkLogging()
                 audit_checks["logging_configuration_checks"] = logging_dict 
             case "p":
                 # Permissions (File) Checks
-                #print("Permissions (File) Checks")
                 file_perm_dict = checkPermissions()
                 audit_checks["file_permission_checks"] = file_perm_dict 
             case "r":
                 # Remote / SSH Checks
-                #print("Remote / SSH Checks")
                 ssh_checks_dict = checkRemote()
                 audit_checks["ssh_remote_checks"] = ssh_checks_dict 
             case "s":
                 # Services Check
-                #print("Services Check")
                 service_dict = checkServices()
                 audit_checks["service_configuration_checks"] = service_dict 
             case "u":
                 # User-privileges Check
-                #print("User-privileges Check")
                 upriv_dict = checkUserPrivileges()
                 audit_checks["user_privileges_check"] = upriv_dict 
 
@@ -3422,8 +3451,22 @@ def auditChecksSubsetWrapper(subset):
     # Provide summary (total checks, total pass, total fail, total warning?)
     overall_scan_info["audit_checks"] = audit_checks
 
+    # Create test count summary dict
+    global PASSES
+    global FAILURES
+    global WARNINGS
+    global TOTAL_CHECKS
+    overall_tc_summary_dict = {
+        "Total_Checks" : TOTAL_CHECKS,
+        "Total_Pass" : PASSES,
+        "Total_Fail" : FAILURES,
+        "Total_Warn" : WARNINGS
+    }
+
+    # Add the test case summary to the overall_scan_info dict
+    overall_scan_info["audit_summary"] = overall_tc_summary_dict 
+
     # Create the JSON output
-    #audit_ouput_json = json.dumps(overall_scan_info, indent=4, sort_keys=True)
     audit_ouput_json = json.dumps(overall_scan_info, indent=4, sort_keys=False)
 
     #=============================================
@@ -3431,24 +3474,38 @@ def auditChecksSubsetWrapper(subset):
     #=============================================
     # If print to stdout only
     if PRINT:
-        # Quick print check
-        #print(audit_ouput_json)
-        reportOutput(overall_scan_info, 0)
+        # Once complete - output counts
+        logging.info(f"Total Checks : {TOTAL_CHECKS} || Total Pass : {PASSES} || Total Fail : {FAILURES} || Total Warnings : {WARNINGS}")
+        #reportOutput(overall_scan_info, 0)
+        reportOutput(overall_scan_info, 0, "")
 
     else:
-        # Print to stdout
-        print(audit_ouput_json)
-
+        basename = os.path.basename(OUTPUT)
         # Create output
         try:
             with open(OUTPUT, "w") as file:
                 file.write(audit_ouput_json)
+            logging.info(f"Writing audit report to file [ {basename} ]")
+            # Once complete - output counts
+            logging.info(f"Total Checks : {TOTAL_CHECKS} || Total Pass : {PASSES} || Total Fail : {FAILURES} || Total Warnings : {WARNINGS}")
         except PermissionError:
-            logging.exception(f"Failed to write output to {OUTPUT} - Permissions Error")
+            logging.exception(f"Failed to write output to {basename} - Permissions Error")
+            # Once complete - output counts
+            logging.info(f"Total Checks : {TOTAL_CHECKS} || Total Pass : {PASSES} || Total Fail : {FAILURES} || Total Warnings : {WARNINGS}")
+            # Print to stdout
+            print(audit_ouput_json)
         except IOError as e:
-            logging.exception(f"Failed to write output to {OUTPUT} - I/O Error [ {e} ]")
+            logging.exception(f"Failed to write output to {basename} - I/O Error [ {e} ]")
+            # Once complete - output counts
+            logging.info(f"Total Checks : {TOTAL_CHECKS} || Total Pass : {PASSES} || Total Fail : {FAILURES} || Total Warnings : {WARNINGS}")
+            # Print to stdout
+            print(audit_ouput_json)
         except Exception as e:
-            logging.exception(f"Failed to write output to {OUTPUT} - Unexpeced Error [ {e} ]")
+            logging.exception(f"Failed to write output to {basename} - Unexpeced Error [ {e} ]")
+            # Once complete - output counts
+            logging.info(f"Total Checks : {TOTAL_CHECKS} || Total Pass : {PASSES} || Total Fail : {FAILURES} || Total Warnings : {WARNINGS}")
+            # Print to stdout
+            print(audit_ouput_json)
 
 #==============
 # Wrapper for Full Audit Checks
@@ -3512,8 +3569,22 @@ def auditChecksFullWrapper():
     # Provide summary (total checks, total pass, total fail, total warning?)
     overall_scan_info["audit_checks"] = audit_checks
 
+    # Create test count summary dict
+    global PASSES
+    global FAILURES
+    global WARNINGS
+    global TOTAL_CHECKS
+    overall_tc_summary_dict = {
+        "Total_Checks" : TOTAL_CHECKS,
+        "Total_Pass" : PASSES,
+        "Total_Fail" : FAILURES,
+        "Total_Warn" : WARNINGS
+    }
+
+    # Add the test case summary to the overall_scan_info dict
+    overall_scan_info["audit_summary"] = overall_tc_summary_dict 
+
     # Create the JSON output
-    #audit_ouput_json = json.dumps(overall_scan_info, indent=4, sort_keys=True)
     audit_ouput_json = json.dumps(overall_scan_info, indent=4)
 
     #=============================================
@@ -3521,32 +3592,44 @@ def auditChecksFullWrapper():
     #=============================================
     # If print to stdout only
     if PRINT:
-        # Quick print check
-        #print(audit_ouput_json)
-        reportOutput(overall_scan_info, 0)
+        # Once complete - output counts
+        logging.info(f"Total Checks : {TOTAL_CHECKS} || Total Pass : {PASSES} || Total Fail : {FAILURES} || Total Warnings : {WARNINGS}")
+        #reportOutput(overall_scan_info, 0)
+        reportOutput(overall_scan_info, 0, "")
 
     else:
+        basename = os.path.basename(OUTPUT)
         # Create output
         try:
             with open(OUTPUT, "w") as file:
                 file.write(audit_ouput_json)
+            logging.info(f"Writing audit report to file [ {basename} ]")
+            # Once complete - output counts
+            logging.info(f"Total Checks : {TOTAL_CHECKS} || Total Pass : {PASSES} || Total Fail : {FAILURES} || Total Warnings : {WARNINGS}")
         except PermissionError:
-            logging.exception(f"Failed to write output to {OUTPUT} - Permissions Error")
+            logging.exception(f"Failed to write output to {basename} - Permissions Error")
+            # Once complete - output counts
+            logging.info(f"Total Checks : {TOTAL_CHECKS} || Total Pass : {PASSES} || Total Fail : {FAILURES} || Total Warnings : {WARNINGS}")
             # Print to stdout if error writing
             print(audit_ouput_json)
         except IOError as e:
-            logging.exception(f"Failed to write output to {OUTPUT} - I/O Error [ {e} ]")
+            logging.exception(f"Failed to write output to {basename} - I/O Error [ {e} ]")
+            # Once complete - output counts
+            logging.info(f"Total Checks : {TOTAL_CHECKS} || Total Pass : {PASSES} || Total Fail : {FAILURES} || Total Warnings : {WARNINGS}")
             # Print to stdout if error writing
             print(audit_ouput_json)
         except Exception as e:
-            logging.exception(f"Failed to write output to {OUTPUT} - Unexpeced Error [ {e} ]")
+            logging.exception(f"Failed to write output to {basename} - Unexpeced Error [ {e} ]")
+            # Once complete - output counts
+            logging.info(f"Total Checks : {TOTAL_CHECKS} || Total Pass : {PASSES} || Total Fail : {FAILURES} || Total Warnings : {WARNINGS}")
             # Print to stdout if error writing
             print(audit_ouput_json)
+
 
 #==============
 # Report Output to STDOUT
 #==============
-def reportOutput(audit_report_dict, indent_count):
+def reportOutput(audit_report_dict, indent_count, calling_check):
 
     indent_spaces = "  "
     current_indent = indent_count + 1
@@ -3564,10 +3647,16 @@ def reportOutput(audit_report_dict, indent_count):
         #   If yes - recursive call to this output function
         #   else - output
         if isinstance(value, dict):
-            print(f"{indent}{key}")
-            reportOutput(value, current_indent)
+            #print(f"{indent}{key}")
+            if calling_check != "":
+                new_calling_check = f"{calling_check} : {key}"
+            else:
+                new_calling_check = f"{key}"
+            reportOutput(value, current_indent, new_calling_check)
         else:
-            print(f"{indent}{key} : {value} ")
+            if key == "status":
+                #print(f"{indent}{key} : {value} ")
+                print(f"[{value}] {calling_check}")
 
 #==============
 # Determine Linux OS
@@ -3630,7 +3719,7 @@ def ingestFileToString(passed_path):
     except PermissionError:
         logging.exception(f"Error: Permissions error for file [ {file_path} ]")
     except Exception as e:
-        logging.exception(f"Unexpected error while reading uid file [ {e} ]")
+        logging.exception(f"Unexpected error while reading file [ {e} ]")
 
     # Return the string
     return ret_str
@@ -3671,7 +3760,7 @@ def isolateStringInFile(passed_path, search_array):
     except PermissionError:
         logging.exception(f"Error: Permissions error for file [ {file_path} ]")
     except Exception as e:
-        logging.exception(f"Unexpected error while reading uid file [ {e} ]")
+        logging.exception(f"Unexpected error while reading file [ {e} ]")
 
     # Return the string
     return ret_strings
@@ -3833,7 +3922,8 @@ def main():
     PRINT = True if args.print else False
 
     # Determine output name (if defined or generated)
-    OUTPUT = args.output if args.output else generateOutputName()
+    if not PRINT:
+        OUTPUT = args.output if args.output else generateOutputName()
 
     #-------------
     # Run enviroment checks
@@ -3845,29 +3935,28 @@ def main():
         logging.error("Please run script with sudo")
         sys.exit()
 
-    # Determine OS (UD = ubuntu/debian; RC = RHEL/CentOS)
-    global OS_UD
-    global OS_RC
-    OS_UD, OS_RC = getOSType()
-
     #-------------
     # Info
     #-------------
     if args.subcommand == 'info':
-        #outputAuditCheckInformation()
-        print(f"PRINTING INFO")
+        outputAuditCheckInformation()
 
     #-------------
     # Audit Only
     #-------------
     elif args.subcommand == 'audit':
 
+        # Determine OS (UD = ubuntu/debian; RC = RHEL/CentOS)
+        global OS_UD
+        global OS_RC
+        OS_UD, OS_RC = getOSType()
+
         # Determine Audit Type
         if args.full:
             auditChecksFullWrapper()
         else:
             auditChecksSubsetWrapper(args.subset)
-
+    
 if __name__ == "__main__":
     main()
 

@@ -64,34 +64,58 @@ The toolkit performs automated checks aligned with common enterprise security pr
 ## Example Output
 
 ```text
-audit_checks
-    kernel_checks
-      ip_forwarding
-        ipv4_forwarding
-          expected : disabled 
-          actual : disabled 
-          status : PASS 
-        ipv6_forwarding
-          expected : disabled 
-          actual : disabled 
-          status : PASS 
-      icmp_redirects
-        icmp_redirects_accept
-          expected : disabled 
-          actual : disabled 
-          status : PASS 
+[FAIL] audit_checks : auto_update_checks : unattended_upgrades
+[FAIL] audit_checks : auto_update_checks : packet_manager_configured
+[PASS] audit_checks : auto_update_checks : update_timer_status
+[PASS] audit_checks : credential_policy_checks : minimum_password_length
+[FAIL] audit_checks : credential_policy_checks : password_complexity : required_character_classes
+[FAIL] audit_checks : credential_policy_checks : password_complexity : required_character_digit
+[FAIL] audit_checks : credential_policy_checks : password_complexity : required_character_lowercase
+[FAIL] audit_checks : credential_policy_checks : password_complexity : required_character_uppercase
+[FAIL] audit_checks : credential_policy_checks : password_complexity : required_character_special
+[FAIL] audit_checks : credential_policy_checks : password_expiration
+[FAIL] audit_checks : credential_policy_checks : password_reuse_prevention
+[PASS] audit_checks : credential_policy_checks : account_lockout_policy
+[FAIL] audit_checks : firewall_checks : firewall_enabled
 ```
 
 Generated JSON report:
 
 ```json
 {
-  "hostname": "server01",
-  "checks": {
-    "ufw_enabled": "PASS",
-    "ssh_root_login": "FAIL",
-    "auditd_running": "PASS"
-  }
+    "scan_metadata": {
+        "hostname": "tester01",
+        "os": "Linux-6.19.14+kali-amd64-x86_64-with-glibc2.42",
+        "kernel_version": "#1 SMP PREEMPT_DYNAMIC Kali 6.19.14-1+kali1 (2026-05-05)",
+        "scan_timestamp": "20260603_100709"
+    },
+    "audit_checks": {
+        "auto_update_checks": {
+            "unattended_upgrades": {
+                "expected": "enabled",
+                "actual": "disabled",
+                "status": "FAIL"
+            },
+            "packet_manager_configured": {
+                "expected": "apt",
+                "actual": "apt",
+                "status": "FAIL"
+            },
+            "update_timer_status": {
+                "expected": "active",
+                "actual": "active",
+                "status": "PASSED"
+            }
+        },
+    ...
+    ...
+    },
+    "audit_summary": {
+        "Total_Checks": 61,
+        "Total_Pass": 22,
+        "Total_Fail": 34,
+        "Total_Warn": 2
+    }
 }
 ```
 
