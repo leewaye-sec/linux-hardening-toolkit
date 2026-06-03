@@ -94,7 +94,7 @@ def generateOutputName():
     if uid_path is not None:
         try:
             with open(uid_path, "r") as file:
-                system_identifier = file.read()
+                system_identifier = file.read().strip()
             logging.debug(f"\tDetermining System UID [ {system_identifier} ]")
         except FileNotFoundError:
             logging.exception(f"Error: File was not found [ {uid_path} ]")
@@ -109,6 +109,8 @@ def generateOutputName():
     # If path check failed or opening/reading file failed, proceed without the information
     else:
         output_name_to_ret = f"{output_name_to_ret}.json"
+
+    logging.debug(f"\t\tOutput File Name Determined [ {output_name_to_ret} ]")
 
     return output_name_to_ret 
 
@@ -738,7 +740,7 @@ def credentialLockout():
 #--------------
 def serviceEnabledActiveChecker(service):
 
-    logging.debug(f"Service Check [ {service} ] : Enabled / Active")
+    logging.debug(f"\t\tCheck Service [ {service} ]")
     
     #=============
     # Define variables
@@ -759,36 +761,28 @@ def serviceEnabledActiveChecker(service):
     # Run Check
     #=============
     try:
-        service_output = subprocess.check_output(cmd_str, text=True)
-
-        # First check if the service is even found
-        if "could not be found" in service_output:
+        service_output = subprocess.run(cmd_str, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        #if 'enabled' in enabled_output:
+        if service_output.returncode == 4:
+            logging.debug(f"\t\tProcess {service} : Not Active / Not Enabled")
             # Update global
-            updateSummaryCounts(0, 1, 0, 1)
+            updateSummaryCounts(0, 2, 0, 2)
             enabled_actual = "disabled"
             enabled_status = "FAIL"
             active_actual = "disabled"
             active_status = "FAIL"
-        else:
-            # Enabled Checks
-            if 'enabled' in service_output:
-                # Update global
-                updateSummaryCounts(1, 0, 0, 1)
-            else:
-                # Update global
-                updateSummaryCounts(0, 1, 0, 1)
-                enabled_actual = "disabled"
-                enabled_status = "FAIL"
 
-            # Active Checks
-            if 'active' in service_output:
-                # Update global
-                updateSummaryCounts(1, 0, 0, 1)
-            else:
-                # Update global
-                updateSummaryCounts(0, 1, 0, 1)
-                active_actual = "disabled"
-                active_status = "FAIL"
+        elif service_output.returncode >= 1 and service_output.returncode <= 3:
+            logging.debug(f"\t\tProcess {service} : Active / Not Enabled")
+            # Update global
+            updateSummaryCounts(0, 1, 0, 1)
+            active_actual = "disabled"
+            active_status = "FAIL"
+
+        elif service_output.returncode == 0:
+            # Update global
+            logging.debug(f"\t\tProcess {service} : Active / Enabled")
+            updateSummaryCounts(1, 0, 0, 1)
 
     except Exception as e:
         logging.exception(f"Failed to determine if [ {service} ] is enabled and active [ {e} ]")
@@ -807,9 +801,9 @@ def serviceEnabledActiveChecker(service):
             "status" : enabled_status
         },
         "service_active" : {
-            "expected" : enabled_expected,
-            "actual" : enabled_actual,
-            "status" : enabled_status
+            "expected" : active_expected,
+            "actual" : active_actual,
+            "status" : active_status
         }
     }
 
@@ -823,7 +817,7 @@ def loggingRsyslogActive():
     logging.debug(f"\tWorking on [ Logging Checks : rsyslog status ]")
 
     # Check if the service is enabled / active
-    rsyslog_dict = serviceEnabledActiveChecker(rsyslog)
+    rsyslog_dict = serviceEnabledActiveChecker("rsyslog")
     return rsyslog_dict
     
 
@@ -834,7 +828,7 @@ def loggingAuditdActive():
     logging.debug(f"\tWorking on [ Logging Checks : auditd status ]")
 
     # Check if the service is enabled / active
-    auditd_dict = serviceEnabledActiveChecker(auditd)
+    auditd_dict = serviceEnabledActiveChecker("auditd")
     return auditd_dict
 
 #--------------
@@ -844,7 +838,7 @@ def loggingJournaldPersistence():
     logging.debug(f"\tWorking on [ Logging Checks : journald persistence ]")
 
     # Check if the service is enabled / active
-    journald_dict = serviceEnabledActiveChecker(journald)
+    journald_dict = serviceEnabledActiveChecker("journald")
     return journald_dict
 
 #--------------
@@ -856,7 +850,7 @@ def loggingLogRotation():
     #===========
     # Check if the service is enabled / active
     #===========
-    logrotate_ea_dict = serviceEnabledActiveChecker(logrotate.timer)
+    logrotate_ea_dict = serviceEnabledActiveChecker("logrotate.timer")
 
     #===========
     # Check for log rotation configuration
@@ -871,7 +865,7 @@ def loggingLogRotation():
     if logrotate_ea_dict['service_enabled']['status'] == "PASS" and logrotate_ea_dict['service_active']['status'] == "PASS":
         # Check for timers
         try:
-            logrot_output = subprocess.check_output(cmd_str, text=True)
+            logrot_output = subprocess.check_output(log_cmd_str, text=True)
 
             # Determine if timers are present
             if "0 timers listed." in logrot_output:
@@ -1530,7 +1524,7 @@ def kernelDisableIPForward():
 
     # Check for IPv4
     try:
-        ipv4_output = subprocess.run(ipv4_cmd_str, text=True)
+        ipv4_output = subprocess.run(ipv4_cmd_str, capture_output=True, text=True)
         if ipv4_output.returncode == 0:
             # Update global
             updateSummaryCounts(1, 0, 0, 1)
@@ -1553,6 +1547,7 @@ def kernelDisableIPForward():
         "actual" : ipv4_actual,
         "status" : ipv4_status
     }
+    logging.debug(f"\t\tIPv4 Forwarding Status : {ipv4_forward_dict['actual']}  [ {ipv4_forward_dict['status']} ]")
 
     #========
     # IPv6
@@ -1568,7 +1563,7 @@ def kernelDisableIPForward():
 
     # Check for IPv6
     try:
-        ipv6_output = subprocess.run(ipv6_cmd_str, text=True)
+        ipv6_output = subprocess.run(ipv6_cmd_str, capture_output=True, text=True)
         if ipv6_output.returncode == 0:
             # Update global
             updateSummaryCounts(1, 0, 0, 1)
@@ -1590,6 +1585,7 @@ def kernelDisableIPForward():
         "actual" : ipv6_actual,
         "status" : ipv6_status
     }
+    logging.debug(f"\t\tIPv6 Forwarding Status : {ipv6_forward_dict['actual']}  [ {ipv6_forward_dict['status']} ]")
 
     #========
     # Create dictionary to return
@@ -1618,7 +1614,7 @@ def kernelDisableICMPRedirect():
     accept_actual = "disabled"
     accept_status = "PASS"
     try:
-        accept_output = subprocess.run(accept_cmd_str, text=True)
+        accept_output = subprocess.run(accept_cmd_str, capture_output=True, text=True)
         if accept_output.returncode == 0:
             # Update global
             updateSummaryCounts(1, 0, 0, 1)
@@ -1639,6 +1635,7 @@ def kernelDisableICMPRedirect():
         "actual" : accept_actual,
         "status" : accept_status
     }
+    logging.debug(f"\t\tAccept ICMP Redirects Status: {accept_dict['actual']}  [ {accept_dict['status']} ]")
 
     #========
     # Send Redirects
@@ -1648,7 +1645,7 @@ def kernelDisableICMPRedirect():
     send_actual = "disabled"
     send_status = "PASS"
     try:
-        send_output = subprocess.run(send_cmd_str, text=True)
+        send_output = subprocess.run(send_cmd_str, capture_output=True, text=True)
         if send_output.returncode == 0:
             # Update global
             updateSummaryCounts(1, 0, 0, 1)
@@ -1669,6 +1666,7 @@ def kernelDisableICMPRedirect():
         "actual" : send_actual,
         "status" : send_status
     }
+    logging.debug(f"\t\tSend ICMP Redirects Status: {send_dict['actual']}  [ {send_dict['status']} ]")
 
     #========
     # Secure Redirects
@@ -1678,7 +1676,7 @@ def kernelDisableICMPRedirect():
     secure_actual = "disabled"
     secure_status = "PASS"
     try:
-        secure_output = subprocess.run(secure_cmd_str, text=True)
+        secure_output = subprocess.run(secure_cmd_str, capture_output=True, text=True)
         if secure_output.returncode == 0:
             # Update global
             updateSummaryCounts(1, 0, 0, 1)
@@ -1699,6 +1697,7 @@ def kernelDisableICMPRedirect():
         "actual" : secure_actual,
         "status" : secure_status
     }
+    logging.debug(f"\t\tSecure ICMP Redirects Status: {secure_dict['actual']}  [ {secure_dict['status']} ]")
 
     #========
     # Final Dictionary to return
@@ -1708,6 +1707,8 @@ def kernelDisableICMPRedirect():
         "icmp_redirects_send" : send_dict,
         "icmp_redirects_secure" : secure_dict
     }
+
+    return icmp_redirects_dict
 
 #--------------
 # Kernel Checks - Enable SYN Cookies
@@ -1728,7 +1729,7 @@ def kernelEnableSYNCookies():
     # Check setting
     #========
     try:
-        syn_output = subprocess.run(cmd_str, text=True)
+        syn_output = subprocess.run(cmd_str, capture_output=True, text=True)
         if syn_output.returncode == 0:
             # Update global
             updateSummaryCounts(1, 0, 0, 1)
@@ -1749,6 +1750,7 @@ def kernelEnableSYNCookies():
         "actual" : syn_actual,
         "status" : syn_status
     }
+    logging.debug(f"\t\tSYN Cookies Status: {syn_dict['actual']}  [ {syn_dict['status']} ]")
 
     return syn_dict
 
@@ -1771,7 +1773,7 @@ def kernelDisableSourceRouting():
     # Check setting
     #========
     try:
-        dis_source_output = subprocess.run(cmd_str, text=True)
+        dis_source_output = subprocess.run(cmd_str, capture_output=True, text=True)
         if dis_source_output.returncode == 0:
             # Update global
             updateSummaryCounts(1, 0, 0, 1)
@@ -1792,6 +1794,8 @@ def kernelDisableSourceRouting():
         "actual" : dis_source_actual,
         "status" : dis_source_status
     }
+
+    logging.debug(f"\t\tSource Routing Status: {dis_source_dict['actual']}  [ {dis_source_dict['status']} ]")
 
     return dis_source_dict
 
@@ -1817,7 +1821,7 @@ def loggingLegacyProtocols():
 # Permissions Checks - Legacy Protocols
 #--------------
 def permissionsWorldWritableFiles():
-    logging.debug(f"\tWorking on [ Permissions : Legacy Protocols ]")
+    logging.debug(f"\tWorking on [ Permissions : World Writable Files ]")
 
     #==============
     # Define parameters
@@ -1856,6 +1860,8 @@ def permissionsWorldWritableFiles():
         "actual" : ww_perm_actual,
         "status" : ww_perm_status
     }
+
+    logging.debug(f"\t\tWorld Writable Files : {ww_perm_dict['actual']} [ {ww_perm_dict['status']} ]")
     
     return ww_perm_dict
 
@@ -1882,115 +1888,59 @@ def permissionsRetriever(path):
     return permissions_to_return 
 
 #--------------
+# Grabs permission for passed file
+#--------------
+def filePermissionIsolation(file_path, expected_permissions):
+    logging.debug(f"\t\tChecking Permissions For [ {file_path} ]")
+
+    passed_file_path = file_path
+    passed_file_exists = Path(passed_file_path)
+    passed_file_expected = expected_permissions
+
+    if passed_file_exists.is_file() or passed_file_exists.is_dir():
+        passed_file_actual = permissionsRetriever(passed_file_path)
+        passed_file_status = "PASS" if passed_file_expected == passed_file_actual else "FAIL"
+
+        passed_file_dict = { 
+            'expected' : passed_file_expected,
+            'actual' : passed_file_actual,
+            'status' : passed_file_status
+        }
+
+        if passed_file_status == "PASS":
+            # Update global
+            updateSummaryCounts(1, 0, 0, 1)
+        else:
+            # Update global
+            updateSummaryCounts(0, 1, 0, 1)
+    else:
+        passed_file_dict = { 
+            'expected' : passed_file_expected,
+            'actual' : "File Not Present",
+            'status' : "PASS"
+        }
+
+        # Update global with PASS
+        updateSummaryCounts(1, 0, 0, 1)
+
+    return passed_file_dict
+
+#--------------
 # Permissions Checks - Improper SSH Key Permission
 #--------------
 def permissionsImproperSSHKeyPermissions():
-    logging.debug(f"\tWorking on [ Permissions : Legacy Protocols ]")
+    logging.debug(f"\tWorking on [ Permissions : SSH Key Permissions ]")
 
     ssh_perm_dict = {}
     
     #================
     # Gather actual permissions
     #================
-    # '~/.ssh' : 700
-    ssh_dir_perms_expected = '700'
-    ssh_dir_perms_actual = permissionsRetriever('~/.ssh')
-    ssh_dir_perms_status = "PASS" if ssh_dir_perms_expected == ssh_dir_perms_actual else "FAIL"
-
-    ssh_dir_perms_dict = { 
-        'expected' : ssh_dir_perms_expected,
-        'actual' : ssh_dir_perms_actual,
-        'status' : ssh_dir_perms_status
-    }
-
-    if ssh_dir_perms_status == "PASS":
-        # Update global
-        updateSummaryCounts(1, 0, 0, 1)
-    else:
-        # Update global
-        updateSummaryCounts(0, 1, 0, 1)
-
-    # '~/.ssh/id_rsa' : 600
-    id_rsa_perms_expected = '600'
-    id_rsa_perms_actual = permissionsRetriever('~/.ssh/id_rsa')
-    id_rsa_perms_status = "PASS" if id_rsa_perms_expected == id_rsa_perms_actual else "FAIL" 
-
-    id_rsa_perms_dict = {
-        'expected' : id_rsa_perms_expected,
-        'actual' : id_rsa_perms_actual,
-        'status' : id_rsa_perms_status
-    }
-
-    if id_rsa_perms_status == "PASS":
-        # Update global
-        updateSummaryCounts(1, 0, 0, 1)
-    else:
-        # Update global
-        updateSummaryCounts(0, 1, 0, 1)
-
-    # '~/.ssh/id_rsa.pub' : 644
-    id_rsa_pub_perms_expected = '644'
-    id_rsa_pub_perms_actual = permissionsRetriever('~/.ssh/id_rsa.pub')
-    id_rsa_pub_perms_status = "PASS" if id_rsa_pub_perms_expected == id_rsa_pub_perms_actual else "FAIL" 
-
-    id_rsa_pub_perms_dict = {
-        'expected' : id_rsa_pub_perms_expected,
-        'actual' : id_rsa_pub_perms_actual,
-        'status' : id_rsa_pub_perms_status
-    }
-
-    if id_rsa_pub_perms_status == "PASS":
-        # Update global
-        updateSummaryCounts(1, 0, 0, 1)
-    else:
-        # Update global
-        updateSummaryCounts(0, 1, 0, 1)
-
-    # '~/.ssh/authorized_keys' : 600
-    auth_keys_perms_expected = '600'
-    auth_keys_perms_actual = permissionsRetriever('~/.ssh/authorized_keys')
-    auth_keys_perms_status = "PASS" if auth_keys_perms_expected == auth_keys_perms_actual else "FAIL" 
-
-    auth_keys_perms_dict = {
-        'expected' : auth_keys_perms_expected,
-        'actual' : auth_keys_perms_actual,
-        'status' : auth_keys_perms_status
-    }
-
-    if auth_keys_perms_status == "PASS":
-        # Update global
-        updateSummaryCounts(1, 0, 0, 1)
-    else:
-        # Update global
-        updateSummaryCounts(0, 1, 0, 1)
-
-    # '~/.ssh/config' : 600
-    ssh_config_perms_expected = '600'
-    ssh_config_perms_actual = permissionsRetriever('~/.ssh/config')
-    ssh_config_perms_status = "PASS" if ssh_config_perms_expected == ssh_config_perms_actual else "FAIL" 
-
-    ssh_config_perms_dict = {
-        'expected' : ssh_config_perms_expected,
-        'actual' : ssh_config_perms_actual,
-        'status' : ssh_config_perms_status
-    }
-
-    if ssh_config_perms_status == "PASS":
-        # Update global
-        updateSummaryCounts(1, 0, 0, 1)
-    else:
-        # Update global
-        updateSummaryCounts(0, 1, 0, 1)
-
-
-    #================
-    # Update final dictionary 
-    #================
-    ssh_perm_dict['~/.ssh'] = ssh_dir_perms_dict 
-    ssh_perm_dict['~/.ssh/id_rsa'] = id_rsa_perms_dict 
-    ssh_perm_dict['~/.ssh/id_rsa.pub'] = id_rsa_pub_perms_dict 
-    ssh_perm_dict['~/.ssh/authorized_keys'] = auth_keys_perms_dict 
-    ssh_perm_dict['~/.ssh/config'] = ssh_config_perms_dict 
+    ssh_perm_dict['~/.ssh'] = filePermissionIsolation('~/.ssh', '700')
+    ssh_perm_dict['~/.ssh/id_rsa'] = filePermissionIsolation('~/.ssh/id_rsa', '600')
+    ssh_perm_dict['~/.ssh/id_rsa.pub'] = filePermissionIsolation('~/.ssh/id_rsa.pub', '644')
+    ssh_perm_dict['~/.ssh/authorized_keys'] = filePermissionIsolation('~/.ssh/authorized_keys', '600')
+    ssh_perm_dict['~/.ssh/config'] = filePermissionIsolation('~/.ssh/config', '600')
 
     return ssh_perm_dict
 
@@ -2022,7 +1972,7 @@ def permissionsSUIDSGIDBinaries():
         else:
             # Update global
             updateSummaryCounts(0, 1, 0, 1)
-            suid_actual = f"{len(suid_lines)} SUID files present"
+            suid_actual = f"{len(suid_cmd_lines)} SUID files present"
             suid_status = "FAIL"
 
     except Exception as e:
@@ -2054,7 +2004,7 @@ def permissionsSUIDSGIDBinaries():
         else:
             # Update global
             updateSummaryCounts(0, 1, 0, 1)
-            sgid_actual = f"{len(sgid_lines)} SUID files present"
+            sgid_actual = f"{len(sgid_cmd_lines)} SUID files present"
             sgid_status = "FAIL"
 
     except Exception as ee:
@@ -2092,71 +2042,11 @@ def permissionsSensitiveFileOwnership():
     sensitive_files_dict = {}
 
     #==============
-    # /etc/passwd
-    #==============
-    passwd_perms_expected = '644'
-    passwd_perms_actual = permissionsRetriever('/etc/passwd')
-    passwd_perms_status = "PASS" if passwd_perms_expected == passwd_perms_actual else "FAIL"
-
-    passwd_perms_dict = { 
-        'expected' : passwd_perms_expected,
-        'actual' : passwd_perms_actual,
-        'status' : passwd_perms_status
-    }
-
-    if passwd_perms_status == "PASS":
-        # Update global
-        updateSummaryCounts(1, 0, 0, 1)
-    else:
-        # Update global
-        updateSummaryCounts(0, 1, 0, 1)
-
-    #==============
-    # /etc/shadow
-    #==============
-    shadow_perms_expected = '600'
-    shadow_perms_actual = permissionsRetriever('/etc/shadow')
-    shadow_perms_status = "PASS" if shadow_perms_expected == shadow_perms_actual else "FAIL"
-
-    shadow_perms_dict = { 
-        'expected' : shadow_perms_expected,
-        'actual' : shadow_perms_actual,
-        'status' : shadow_perms_status
-    }
-
-    if shadow_perms_status == "PASS":
-        # Update global
-        updateSummaryCounts(1, 0, 0, 1)
-    else:
-        # Update global
-        updateSummaryCounts(0, 1, 0, 1)
-
-    #==============
-    # /etc/sudoers
-    #==============
-    sudoers_perms_expected = '440'
-    sudoers_perms_actual = permissionsRetriever('/etc/passwd')
-    sudoers_perms_status = "PASS" if sudoers_perms_expected == sudoers_perms_actual else "FAIL"
-
-    sudoers_perms_dict = { 
-        'expected' : sudoers_perms_expected,
-        'actual' : sudoers_perms_actual,
-        'status' : sudoers_perms_status
-    }
-
-    if sudoers_perms_status == "PASS":
-        # Update global
-        updateSummaryCounts(1, 0, 0, 1)
-    else:
-        # Update global
-        updateSummaryCounts(0, 1, 0, 1)
-
-    #==============
     # Create / return dict
     #==============
-    sensitive_files_dict['/etc/passwd'] = passwd_perm_dict
-    sensitive_files_dict['/etc/shadow'] = shadow_perm_dict
-    sensitive_files_dict['/etc/sudoers'] = sudoers_perm_dict
+    sensitive_files_dict['/etc/passwd'] = filePermissionIsolation('/etc/passwd', '644')
+    sensitive_files_dict['/etc/shadow'] = filePermissionIsolation('/etc/shado', '600')
+    sensitive_files_dict['/etc/sudoers'] = filePermissionIsolation('/etc/sudoers', '440')
 
     return sensitive_files_dict
 
@@ -2164,7 +2054,7 @@ def permissionsSensitiveFileOwnership():
 # Remote / SSH Checks - root login disabled
 #   Search for 'PermitRootLogin' - commented = disabled
 #--------------
-def remoteRootLoginDisabled(config_str):
+def remoteRootLoginDisabled():
     logging.debug(f"\tWorking on [ Remote : Root Loging Disabled ]")
 
     #------------------
@@ -2315,9 +2205,17 @@ def remoteProtocolVersion():
     # Search for the string
     #------------------
     try:
-        version_output = subprocess.run(version_cmd, capture_output=True, text=True)
-        ssh_version = version_output.stdout.strip()
-        ssh_version_status = "PASS"
+        version_output = subprocess.run(version_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    
+        if version_output.returncode == 0:
+            # Versioning is output via stderr
+            ssh_version = version_output.stderr.strip()
+            ssh_version_status = "PASS"
+
+            if ssh_version == "":
+                ssh_version = "Unknown"
+                ssh_version_status = "FAIL"
+
     except Exception as e:
         logging.exception(f"Unexpected error while determining ssh version [ {e} ]")
 
@@ -2367,7 +2265,7 @@ def remoteEmptyPasswordsDisabled():
 
             elif len(emptypass_output_split) == 1:
                 # Check if the string started with '#' -- disabled
-                if emptypass_output[0].startswith('#'):
+                if emptypass_output_split[0].startswith('#'):
                     updateSummaryCounts(1, 0, 0, 1)
 
                 # The line is not commented out
@@ -2442,7 +2340,7 @@ def remoteMaxAuthAttempts():
             elif len(maxauth_output_split) == 1:
 
                 # Check if the string started with '#' -- disabled (so default = 6)
-                if maxauth_output[0].startswith('#'):
+                if maxauth_output_split[0].startswith('#'):
                     updateSummaryCounts(0, 1, 0, 1)
                     max_auth_enabled_actual = "6"
                     max_auth_enabled_status = "FAIL"
@@ -2524,7 +2422,7 @@ def remoteIdleTimeoutConfigured():
             elif len(calive_output_split) == 1:
 
                 # Check if the string started with '#'
-                if calive_output[0].startswith('#'):
+                if calive_output_split[0].startswith('#'):
                     updateSummaryCounts(0, 1, 0, 1)
                     client_alive_enabled_actual = "Not configured"
                     client_alive_enabled_status = "FAIL"
@@ -2601,7 +2499,7 @@ def remoteStrongCipher():
         for cipher in cipher_output_split:
 
             # Note if strong cipher is in reported list
-            if cipher in strong_cipher:
+            if cipher in strong_ciphers:
                 strong_cipher_present = True
                 updateSummaryCounts(0, 1, 0, 1)
 
@@ -2623,9 +2521,9 @@ def remoteStrongCipher():
 
     # Create initial dictionary
     cipher_dict = {
-        "expected" : cipher_expected,
-        "actual" : cipher_actual,
-        "status" : cipher_status
+        "expected" : ciphers_expected,
+        "actual" : ciphers_actual,
+        "status" : ciphers_status
     }
 
     # Process the results
@@ -2825,7 +2723,7 @@ def userPrivSUDOGroupMemberships():
             updateSummaryCounts(1, 0, 0, 1)
 
     except Exception as e:
-        logging.exception(f"Unexpected error while searching {user_zero_path} [ {e} ]")
+        logging.exception(f"Unexpected error while searching for SUDO Group Membership [ {e} ]")
 
     #------------------
     # Create / return dictionary
@@ -2867,11 +2765,11 @@ def presentAccountsChecks():
             for passwd_user in passwd_cat_output_split:
                 user_split = passwd_user.split(':')
 
-                if user_split[2] == 0:
+                if int(user_split[2]) == 0:
                     account_type = "root"
-                elif user_split[2] < 1000:
+                elif int(user_split[2]) < 1000:
                     account_type = "system"
-                elif user_split[2] >= 1000:
+                elif int(user_split[2]) >= 1000:
                     account_type = "user"
 
                 acct = {
@@ -2887,12 +2785,12 @@ def presentAccountsChecks():
 
                 # Append the dictionaries to appropriate array
                 if acct['acct_type'] == "user" or acct['acct_type'] == "root":
-                    user_accts.append(user)
+                    user_accts.append(acct)
                 else:
-                    sys_accts.append(user)
+                    sys_accts.append(acct)
 
     except Exception as e:
-        logging.exception(f"Unexpected error while searching {user_zero_path} [ {e} ]")
+        logging.exception(f"Unexpected error while checking for accounts present [ {e} ]")
 
     #=================
     # Process User Accounts
@@ -2913,10 +2811,10 @@ def presentAccountsChecks():
 #--------------
 def userAccountChageChecks(uname):
     check = "chage"
-    logging.debug(f"\tWorking on [ User Privileges : User Account Checks - {check}]")
+    #logging.debug(f"\tWorking on [ User Privileges : User Account Checks - {check} : {uname}]")
 
     # Set variables
-    chage_cmd = ['chage', 'l', uname]
+    chage_cmd = ['chage', '-l', uname]
 
     acct_expir = "Unable to determine"
     last_pw_change = "Unable to determine"
@@ -2929,33 +2827,35 @@ def userAccountChageChecks(uname):
 
     # Run checks
     try:
-        chage_output = subprocess.run(chage_cmd, capture_output=True, text=True)
+        #chage_output = subprocess.run(chage_cmd, capture_output=True, text=True)
+        chage_output = subprocess.run(chage_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         # Work through the results
-        chage_output_split = chage_output.stdout.strip().split('\n')
+        if chage_output.returncode == 0:
 
-        # Work through the split output and isolate results
-        for info in chage_output_split:
-            if ls_pw_ch in info:
-                # Split the line further to isolate value
-                last_pw_change = info.split(':').strip()[1]
-            elif pw_expir in info:
-                # Split the line further to isolate value
-                passw_expir = info.split(':').strip()[1]
-            elif ac_expir in info:
-                # Split the line further to isolate value
-                acct_expir = info.split(':').strip()[1]
+            chage_output_split = chage_output.stdout.strip().split('\n')
+            # Work through the split output and isolate results
+            for info in chage_output_split:
+                if ls_pw_ch in info.strip():
+                    # Split the line further to isolate value
+                    last_pw_change = info.split(':')[1].strip()
+                elif pw_expir in info:
+                    # Split the line further to isolate value
+                    passw_expir = info.split(':')[1].strip()
+                elif ac_expir in info:
+                    # Split the line further to isolate value
+                    acct_expir = info.split(':')[1].strip()
 
     except Exception as e:
         logging.exception(f"Unexpected error while running '{check}' checks [ {e} ]")
 
-    return ac_expir, last_pw_ch, passw_expir
+    return acct_expir, last_pw_change, passw_expir
 
 #--------------
 # User account checks via passwd
 #--------------
 def userAccountPasswdChecks(uname):
     check = "passwd"
-    logging.debug(f"\tWorking on [ User Privileges : User Account Checks - {check}]")
+    #logging.debug(f"\tWorking on [ User Privileges : User Account Checks - {check}]")
 
     # Set variables
     passwd_cmd = ['passwd', '-S', uname]
@@ -2994,7 +2894,7 @@ def userAccountPasswdChecks(uname):
 #--------------
 def userAccountLastLoginCheck(uname):
     check = "lslogins"
-    logging.debug(f"\tWorking on [ User Privileges : User Account Checks - {check}]")
+    #logging.debug(f"\tWorking on [ User Privileges : User Account Checks - {check}]")
 
     # Set variables
     lslogins_cmd = ['lslogins', uname, '-o','LAST-LOGIN']
@@ -3011,7 +2911,7 @@ def userAccountLastLoginCheck(uname):
         for info in lslogins_output_split:
             # Check for the info
             if "Last login:" in info:
-                last_login = info.replace("Last Login:","").strip()
+                last_login = info.replace("Last login:","").strip()
                 break
 
     except Exception as e:
@@ -3034,7 +2934,7 @@ def auditUserAccounts(passed_user_accts):
     #==============
     # Work through the passed users
     #==============
-    for user in passed_user_accounts:
+    for user in passed_user_accts:
 
         # Isolate username
         username = user['username']
@@ -3079,7 +2979,7 @@ def auditSystemAccounts(passed_sys_accts):
     #==============
     # Work through the passed users
     #==============
-    for sys in passed_sys_accounts:
+    for sys in passed_sys_accts:
 
         # Isolate username
         username = sys['username']
@@ -3090,8 +2990,8 @@ def auditSystemAccounts(passed_sys_accts):
         warning = "PASS"
         shell = "Non-Iteractive Shell"
         # Determine if shell type is interactive
-        if sys['shell'] != "/usr/sbin/nologin" or sys['shell'] != "/bin/false":
-            shell = "Iteractive Shell"
+        if sys['shell'] != "/usr/sbin/nologin" and sys['shell'] != "/bin/false":
+            shell = f"Iteractive Shell [ {sys['shell']} ]"
             warning = "FAIL"
 
         temp_s_dict = {
@@ -3334,21 +3234,10 @@ def checkPermissions():
 #   - Strong ciphers / MACs
 #==========================================
 def checkRemote():
-    logging.info(f"Current Check : [ Permissions (File) ]")
+    logging.info(f"Current Check : [ Remote / SSH Checks]")
 
     # Create dictionary
     remote_ssh_checks_dict = {}
-
-    '''
-    # Will check /etc/ssh/sshd_config
-    ssh_config_file_path = "/etc/ssh/sshd_config"
-    ssh_config = ingestFileToString(ssh_config_file_path)
-
-    # Make sure ssh_config is not empty
-    if ssh_config is None:
-        logging.error(f"Failed to ingest ssh configuration [ {ssh_config_file_path} ]")
-        return remote_ssh_checks_dict 
-    '''
 
     #---
     # Run the checks
@@ -3543,7 +3432,8 @@ def auditChecksSubsetWrapper(subset):
     # If print to stdout only
     if PRINT:
         # Quick print check
-        print(audit_ouput_json)
+        #print(audit_ouput_json)
+        reportOutput(overall_scan_info, 0)
 
     else:
         # Print to stdout
@@ -3620,10 +3510,11 @@ def auditChecksFullWrapper():
     # Create audit dictionary and translate to json
     #=============================================
     # Provide summary (total checks, total pass, total fail, total warning?)
-    overall_scann_info["audit_checks"] = audit_checks
+    overall_scan_info["audit_checks"] = audit_checks
 
     # Create the JSON output
-    audit_ouput_json = json.dumps(overall_scan_info, indent=4, sort_keys=True)
+    #audit_ouput_json = json.dumps(overall_scan_info, indent=4, sort_keys=True)
+    audit_ouput_json = json.dumps(overall_scan_info, indent=4)
 
     #=============================================
     # Output
@@ -3631,22 +3522,52 @@ def auditChecksFullWrapper():
     # If print to stdout only
     if PRINT:
         # Quick print check
-        print(audit_ouput_json)
+        #print(audit_ouput_json)
+        reportOutput(overall_scan_info, 0)
 
     else:
-        # Print to stdout
-        print(audit_ouput_json)
-
         # Create output
         try:
             with open(OUTPUT, "w") as file:
                 file.write(audit_ouput_json)
         except PermissionError:
             logging.exception(f"Failed to write output to {OUTPUT} - Permissions Error")
+            # Print to stdout if error writing
+            print(audit_ouput_json)
         except IOError as e:
             logging.exception(f"Failed to write output to {OUTPUT} - I/O Error [ {e} ]")
+            # Print to stdout if error writing
+            print(audit_ouput_json)
         except Exception as e:
             logging.exception(f"Failed to write output to {OUTPUT} - Unexpeced Error [ {e} ]")
+            # Print to stdout if error writing
+            print(audit_ouput_json)
+
+#==============
+# Report Output to STDOUT
+#==============
+def reportOutput(audit_report_dict, indent_count):
+
+    indent_spaces = "  "
+    current_indent = indent_count + 1
+
+    if indent_count == 0:
+        indent = ""
+    else:
+        indent = indent_spaces * current_indent
+
+    # Iterate through the keys / values
+    #   Call recursively for nested dictionaries
+    for key, value in audit_report_dict.items(): 
+
+        # Determine if there is a nested dictionary
+        #   If yes - recursive call to this output function
+        #   else - output
+        if isinstance(value, dict):
+            print(f"{indent}{key}")
+            reportOutput(value, current_indent)
+        else:
+            print(f"{indent}{key} : {value} ")
 
 #==============
 # Determine Linux OS
@@ -3941,12 +3862,10 @@ def main():
     #-------------
     elif args.subcommand == 'audit':
 
+        # Determine Audit Type
         if args.full:
-            #print(f"\tFULL")
             auditChecksFullWrapper()
         else:
-            #print(f"\tSUBSET")
-            #print(f"\t{args.subset}")
             auditChecksSubsetWrapper(args.subset)
 
 if __name__ == "__main__":

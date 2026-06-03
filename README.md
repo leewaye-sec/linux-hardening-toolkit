@@ -64,10 +64,22 @@ The toolkit performs automated checks aligned with common enterprise security pr
 ## Example Output
 
 ```text
-[PASS] UFW firewall enabled
-[FAIL] Root SSH login permitted
-[PASS] auditd service running
-[WARN] 14 SUID binaries detected
+audit_checks
+    kernel_checks
+      ip_forwarding
+        ipv4_forwarding
+          expected : disabled 
+          actual : disabled 
+          status : PASS 
+        ipv6_forwarding
+          expected : disabled 
+          actual : disabled 
+          status : PASS 
+      icmp_redirects
+        icmp_redirects_accept
+          expected : disabled 
+          actual : disabled 
+          status : PASS 
 ```
 
 Generated JSON report:
