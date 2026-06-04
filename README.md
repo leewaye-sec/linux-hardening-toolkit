@@ -4,7 +4,7 @@ Python-based Linux security auditing toolkit designed to identify insecure syste
 
 The toolkit performs automated checks aligned with common enterprise security practices and CIS benchmark concepts.
 
-![Alternative text here](screanshots/initial_help_menu.png)
+![Initial Help Menu Screenshot](screenshots/initial_help_menu.png)
 
 ---
 
@@ -16,7 +16,7 @@ The toolkit performs automated checks aligned with common enterprise security pr
 - Checks SSH idle timeout configuration
 - Identifies insecure SSH settings
 
-![Alternative text here](screanshots/audit_subset_r_output_to_default_filename.png)
+![SSH Hardening Audit Screenshot](screenshots/audit_subset_r_output_to_default_filename.png)
 
 ### Firewall Validation
 - Detects UFW/firewalld status
@@ -24,7 +24,7 @@ The toolkit performs automated checks aligned with common enterprise security pr
 - Checks secure deny-by-default settings
 - Checks exposed listening ports
 
-![Alternative text here](screanshots/audit_subset_f_output_to_default_filename.png)
+![Firewall Audit Screenshot](screenshots/audit_subset_f_output_to_default_filename.png)
 
 ### Logging & Auditing
 - Verifies `auditd` status
@@ -32,33 +32,33 @@ The toolkit performs automated checks aligned with common enterprise security pr
 - Checks journald persistence
 - Validates log rotation configuration
 
-![Alternative text here](screanshots/audit_subset_l_output_to_default_filename.png)
+![Logging & Auditing Screenshot](screenshots/audit_subset_l_output_to_default_filename.png)
 
 ### User & Privilege Auditing
 - Identifies UID 0 accounts
 - Detects users with sudo privileges
 - Checks for service accounts with interactive shells
 
-![Alternative text here](screanshots/audit_subset_u_output_to_default_filename_verbose_logging.png)
+![User & Privilege Audit Screenshot](screenshots/audit_subset_u_output_to_default_filename_verbose_logging.png)
 
 ### Sysctl Hardening
 - Verifies secure kernel parameters
 - Checks IP forwarding configuration
 - Validates SYN cookie protection
 
-![Alternative text here](screanshots/audit_subset_k_output_to_default_filename.png)
+![Sysctl / Kernel Audit Screenshots](screenshots/audit_subset_k_output_to_default_filename.png)
 
 ### Automatic Update
 - Checks unattended upgrades enablement
 - Detects configured package manager
 - Verifies active update timer
 
-![Alternative text here](screanshots/audit_subset_a_output_to_console_only_verbose_logging.png)
+![Automatic Updates Audit Screenshot](screenshots/audit_subset_a_output_to_console_only_verbose_logging.png)
 
 ### Credential Policy Auditing
 - Verifies secure password configuration
 
-![Alternative text here](screanshots/audit_subset_c_output_to_default_filename.png)
+![Credential / Password Audit Screenshot](screenshots/audit_subset_c_output_to_default_filename.png)
 
 ### Sensitive File Permissions
 - Checks for world-writable files
@@ -66,14 +66,14 @@ The toolkit performs automated checks aligned with common enterprise security pr
 - Identifies SUID / SGID binaries
 - Verifies sensitive file ownership
 
-![Alternative text here](screanshots/audit_subset_f_output_to_default_filename.png)
+![Sensitive File Permissions Audit Screenshot](screenshots/audit_subset_f_output_to_default_filename.png)
 
 ### Service Minimization
 - Identifies running services (notes typical risk level)
 - Checks exposed network services
 - Detects legacy protocols (e.g. telnet, rsh, cups, etc.)
 
-![Alternative text here](screanshots/audit_subset_s_output_to_default_filename.png)
+![Service Minimization Audit Screenshot](screenshots/audit_subset_s_output_to_default_filename.png)
 
 ### Reporting
 - Terminal-based results
@@ -85,7 +85,7 @@ The toolkit performs automated checks aligned with common enterprise security pr
 ### Info
 Info-Mode is used simply to output the scripts general purpose as well as available checks / information about those checks.
 
-![Alternative text here](screanshots/info_output.png)
+![Script Mode Info Screenshot](screenshots/info_output.png)
 
 ### Audit
 Audit-Mode has two built-in run options: Full Audit or Subset Audit
@@ -93,17 +93,17 @@ Audit-Mode has two built-in run options: Full Audit or Subset Audit
 #### Full Audit (--full, -f)
 The full audit option for operation completes all audit checks currently available
 
-![Alternative text here](screanshots/audit_full_audit_output_file.png)
+![Script Mode Audit Full Screenshot](screenshots/audit_full_audit_output_file.png)
 
 #### Subset Audit (--subset, -s)
 The subset audit option for operation allows the user to select the checks to be done.
 The user can select a single audit check to run,
 
-![Alternative text here](screanshots/audit_subset_u_output_to_default_filename_verbose_logging.png)
+![Script Mode Audit Subset Single Screenshot](screenshots/audit_subset_u_output_to_default_filename_verbose_logging.png)
 
 or the user can select multiple audit checks to run.
 
-![Alternative text here](screanshots/audit_subset_ac_output_to_specific_filename_verbose_logging.png)
+![Script Mode Audit Subset Multi Screenshot](screenshots/audit_subset_ac_output_to_specific_filename_verbose_logging.png)
 
 ---
 
