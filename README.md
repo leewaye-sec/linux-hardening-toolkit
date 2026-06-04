@@ -4,52 +4,6 @@ Python-based Linux security auditing toolkit designed to identify insecure syste
 
 The toolkit performs automated checks aligned with common enterprise security practices and CIS benchmark concepts.
 
-┌──────────────────────────┐
-│      Linux Endpoint      │
-└────────────┬─────────────┘
-             │
-             ▼
-┌──────────────────────────┐
-│ Linux Hardening Toolkit  │
-│      Audit Engine        │
-└────────────┬─────────────┘
-             │
-             ▼
-┌───────────────────────────────────────────┐
-│            Data Collection Layer          │
-├───────────────────────────────────────────┤
-│ systemctl                                 │
-│ ss / netstat                              │
-│ lastlog                                   │
-│ passwd / shadow                           │
-│ sysctl                                    │
-│ sshd_config                               │
-│ auditd                                    │
-│ firewall configuration                    │
-└────────────────────┬──────────────────────┘
-                     │
-                     ▼
-┌───────────────────────────────────────────┐
-│           Security Analysis Layer         │
-├───────────────────────────────────────────┤
-│ SSH Hardening Checks                      │
-│ Firewall Analysis                         │
-│ User Auditing                             │
-│ Service Minimization                      │
-│ Logging Validation                        │
-│ Sysctl Validation                         │
-│ Password Policy Validation                │
-└────────────────────┬──────────────────────┘
-                     │
-                     ▼
-┌───────────────────────────────────────────┐
-│             Reporting Layer               │
-├───────────────────────────────────────────┤
-│ PASS/WARN/FAIL Findings                   │
-│ Audit Summary                             │
-│ JSON Report Generation                    │
-└───────────────────────────────────────────┘
-
 ---
 
 ## Features
