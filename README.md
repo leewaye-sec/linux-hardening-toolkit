@@ -78,6 +78,53 @@ The subset audit option for operation allows the user to select the checks to be
 The user can select a single audit check to run, or the user can select multiple audit checks to run.
 
 ---
+## Usage
+
+Run the audit tool: --help
+
+```bash
+python3 src/linuxSecureConfigEvaluation.py --help
+```
+
+Run the audit tool: audit --full with verbose logging
+
+```bash
+python3 src/linuxSecureConfigEvaluation.py audit --full -v
+```
+
+Generate JSON report with specific name:
+
+```bash
+python3 src/linuxSecureConfigEvaluation.py audit --full --output server01_secure_configuration_audit_2026.json
+```
+
+Output results to STDOUT only:
+
+```bash
+python3 src/linuxSecureConfigEvaluation.py audit --full --print
+```
+
+---
+
+## Screenshots
+
+### Full Audit (--full, -f)
+
+![Script Mode Audit Full Screenshot](screenshots/audit_full_audit_output_file.png)
+
+### Subset Audit (--subset, -s) | Multiple Audit Checks
+
+![Script Mode Audit Subset Multi Screenshot](screenshots/audit_subset_ac_output_to_specific_filename_verbose_logging.png)
+
+### Sysctl Hardening
+![Sysctl / Kernel Audit Screenshots](screenshots/audit_subset_k_output_to_default_filename.png)
+
+
+### Automatic Update
+
+![Automatic Updates Audit Screenshot](screenshots/audit_subset_a_output_to_console_only_verbose_logging.png)
+
+---
 
 ## Example Output
 
@@ -140,24 +187,6 @@ Generated JSON report:
 ```
 ---
 
-## Example Usage
-
-### Full Audit (--full, -f)
-
-![Script Mode Audit Full Screenshot](screenshots/audit_full_audit_output_file.png)
-
-### Subset Audit (--subset, -s)
-
-![Script Mode Audit Subset Multi Screenshot](screenshots/audit_subset_ac_output_to_specific_filename_verbose_logging.png)
-
-### Sysctl Hardening
-![Sysctl / Kernel Audit Screenshots](screenshots/audit_subset_k_output_to_default_filename.png)
-
-
-### Automatic Update
-
-![Automatic Updates Audit Screenshot](screenshots/audit_subset_a_output_to_console_only_verbose_logging.png)
----
 
 ## Project Structure
 
@@ -188,33 +217,6 @@ cd linux-hardening-toolkit
 
 ---
 
-## Usage
-
-Run the audit tool: --help
-
-```bash
-python3 src/linuxSecureConfigEvaluation.py --help
-```
-
-Run the audit tool: audit --full with verbose logging
-
-```bash
-python3 src/linuxSecureConfigEvaluation.py audit --full -v
-```
-
-Generate JSON report with specific name:
-
-```bash
-python3 src/linuxSecureConfigEvaluation.py audit --full --output server01_secure_configuration_audit_2026.json
-```
-
-Output results to STDOUT only:
-
-```bash
-python3 src/linuxSecureConfigEvaluation.py audit --full --print
-```
-
----
 
 ## Security Considerations
 
