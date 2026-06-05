@@ -4,6 +4,8 @@ Python-based Linux security auditing toolkit designed to identify insecure syste
 
 The toolkit performs automated checks aligned with common enterprise security practices and CIS benchmark concepts.
 
+![Linux Hardening Architecture](docs/LinuxHardeningArchitecture.png)
+
 ---
 
 ## Features
