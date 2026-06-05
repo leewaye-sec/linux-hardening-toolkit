@@ -95,7 +95,7 @@ python3 src/linuxSecureConfigEvaluation.py audit --full -v
 Generate JSON report with specific name:
 
 ```bash
-python3 src/linuxSecureConfigEvaluation.py audit --full --output server01_secure_configuration_audit_2026.json
+python3 src/linuxSecureConfigEvaluation.py audit --subset k s u  --output server01_secure_configuration_audit_2026.json
 ```
 
 Output results to STDOUT only:
